@@ -2,7 +2,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as puppeteer from 'puppeteer';
+import type * as puppeteer from 'puppeteer';
 import {
   recordOptions,
   listenerHandler,
@@ -192,6 +192,23 @@ describe('record', function (this: ISuite) {
     assertSnapshot(ctx.events);
   });
 
+  it('should record scroll position', async () => {
+    await ctx.page.evaluate(() => {
+      const { record } = ((window as unknown) as IWindow).rrweb;
+      record({
+        emit: ((window as unknown) as IWindow).emit,
+      });
+      const p = document.createElement('p');
+      p.innerText = 'testtesttesttesttesttesttesttesttesttest';
+      p.setAttribute('style', 'overflow: auto; height: 1px; width: 1px;');
+      document.body.appendChild(p);
+      p.scrollTop = 10;
+      p.scrollLeft = 10;
+    });
+    await waitForRAF(ctx.page);
+    assertSnapshot(ctx.events);
+  });
+
   it('can add custom event', async () => {
     await ctx.page.evaluate(() => {
       const { record, addCustomEvent } = ((window as unknown) as IWindow).rrweb;
@@ -342,6 +359,26 @@ describe('record', function (this: ISuite) {
       }, 0);
     });
     await ctx.page.waitForTimeout(50);
+    assertSnapshot(ctx.events);
+  });
+
+  it('captures inserted style text nodes correctly', async () => {
+    await ctx.page.evaluate(() => {
+      const { record } = ((window as unknown) as IWindow).rrweb;
+
+      const styleEl = document.createElement(`style`);
+      styleEl.append(document.createTextNode('div { color: red; }'));
+      styleEl.append(document.createTextNode('section { color: blue; }'));
+      document.head.appendChild(styleEl);
+
+      record({
+        emit: ((window as unknown) as IWindow).emit,
+      });
+
+      styleEl.append(document.createTextNode('span { color: orange; }'));
+      styleEl.append(document.createTextNode('h1 { color: pink; }'));
+    });
+    await waitForRAF(ctx.page);
     assertSnapshot(ctx.events);
   });
 });

@@ -1,5 +1,5 @@
-import { ICanvas } from 'rrweb-snapshot';
-import { blockClass, IWindow, listenerHandler } from '../../../types';
+import type { ICanvas } from 'rrweb-snapshot';
+import type { blockClass, IWindow, listenerHandler } from '../../../types';
 import { isBlocked, patch } from '../../../utils';
 
 export default function initCanvasContextObserver(
@@ -17,9 +17,8 @@ export default function initCanvasContextObserver(
           contextType: string,
           ...args: Array<unknown>
         ) {
-          if (!isBlocked(this, blockClass)) {
-            if (!('__context' in this))
-              (this as ICanvas).__context = contextType;
+          if (!isBlocked(this, blockClass, true)) {
+            if (!('__context' in this)) this.__context = contextType;
           }
           return original.apply(this, [contextType, ...args]);
         };

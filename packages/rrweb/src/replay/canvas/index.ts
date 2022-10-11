@@ -1,4 +1,4 @@
-import { Replayer } from '..';
+import type { Replayer } from '..';
 import {
   CanvasContext,
   canvasMutationCommand,
@@ -24,7 +24,7 @@ export default async function canvasMutation({
   errorHandler: Replayer['warnCanvasMutationFailed'];
 }): Promise<void> {
   try {
-    let precomputedMutation: canvasMutationParam =
+    const precomputedMutation: canvasMutationParam =
       canvasEventMap.get(event) || mutation;
 
     const commands: canvasMutationCommand[] =

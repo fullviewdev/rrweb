@@ -148,7 +148,8 @@ function buildNode(
         }
         let value = n.attributes[name];
         if (tagName === 'option' && name === 'selected' && value === false) {
-          // legacy fix (TODO: if `value === false` can be generated for other attrs, should we also omit those other attrs from build?)
+          // legacy fix (TODO: if `value === false` can be generated for other attrs,
+          // should we also omit those other attrs from build ?)
           continue;
         }
         value =
@@ -330,7 +331,7 @@ export function buildNodeWithSN(
   if (n.rootId) {
     console.assert(
       (mirror.getNode(n.rootId) as Document) === doc,
-      'Target document should has the same root id.',
+      'Target document should have the same root id.',
     );
   }
   // use target document as root document

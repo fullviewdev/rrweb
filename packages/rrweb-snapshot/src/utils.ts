@@ -3,6 +3,7 @@ import {
   MaskInputFn,
   MaskInputOptions,
   nodeMetaMap,
+  IMirror,
   serializedNodeWithId,
 } from './types';
 
@@ -12,10 +13,10 @@ export function isElement(n: Node): n is Element {
 
 export function isShadowRoot(n: Node): n is ShadowRoot {
   const host: Element | null = (n as ShadowRoot)?.host;
-  return Boolean(host && host.shadowRoot && host.shadowRoot === n);
+  return Boolean(host?.shadowRoot === n);
 }
 
-export class Mirror {
+export class Mirror implements IMirror<Node> {
   private idNodeMap: idNodeMap = new Map();
   private nodeMetaMap: nodeMetaMap = new WeakMap();
 
@@ -47,7 +48,9 @@ export class Mirror {
     this.idNodeMap.delete(id);
 
     if (n.childNodes) {
-      n.childNodes.forEach((childNode) => this.removeNodeFromMap(childNode));
+      n.childNodes.forEach((childNode) =>
+        this.removeNodeFromMap((childNode as unknown) as Node),
+      );
     }
   }
   has(id: number): boolean {
