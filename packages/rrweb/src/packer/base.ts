@@ -1,9 +1,7 @@
-import { eventWithTime } from '../types';
+export type PackFn = (event: { timestamp: number }) => string;
+export type UnpackFn = (raw: string) => { timestamp: number };
 
-export type PackFn = (event: eventWithTime) => string;
-export type UnpackFn = (raw: string) => eventWithTime;
-
-export type eventWithTimeAndPacker = eventWithTime & {
+export type eventWithTimeAndPacker = { timestamp: number } & {
   v: string;
 };
 
