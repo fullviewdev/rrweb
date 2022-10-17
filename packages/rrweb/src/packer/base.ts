@@ -1,7 +1,7 @@
-export type PackFn = (event: { timestamp: number }) => string;
-export type UnpackFn = (raw: string) => { timestamp: number };
+export type PackFn<T extends { timestamp: number }> = (event: T) => string;
+export type UnpackFn<T extends { timestamp: number }> = (raw: string) => T;
 
-export type eventWithTimeAndPacker = { timestamp: number } & {
+export type eventWithTimeAndPacker<T extends { timestamp: number }> = T & {
   v: string;
 };
 
