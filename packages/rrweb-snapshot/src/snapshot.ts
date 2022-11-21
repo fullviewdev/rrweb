@@ -270,17 +270,6 @@ export function _isDeletedElement(
   return false;
 }
 
-export function _isDeletedElement(
-  element: HTMLElement,
-  deleteSelector: string | null,
-): boolean {
-  if (deleteSelector) {
-    return element.matches(deleteSelector);
-  }
-
-  return false;
-}
-
 export function needMaskingText(
   node: Node | null,
   maskTextClass: string | RegExp,
