@@ -1,4 +1,7 @@
-import type { elementNode, serializedNodeWithId } from '@fullview/rrweb-snapshot';
+import type {
+  elementNode,
+  serializedNodeWithId,
+} from '@fullview/rrweb-snapshot';
 import { getCssRuleString } from '@fullview/rrweb-snapshot';
 import type {
   adoptedStyleSheetCallback,

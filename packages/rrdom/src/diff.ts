@@ -1,4 +1,7 @@
-import { NodeType as RRNodeType, Mirror as NodeMirror } from '@fullview/rrweb-snapshot';
+import {
+  NodeType as RRNodeType,
+  Mirror as NodeMirror,
+} from '@fullview/rrweb-snapshot';
 import type {
   canvasMutationData,
   canvasEventWithTime,
