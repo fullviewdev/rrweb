@@ -11,7 +11,11 @@ import type {
   EventType,
 } from '@rrweb/types';
 import type { IMirror, Mirror } from 'rrweb-snapshot';
-import { isShadowRoot, IGNORED_NODE, classMatchesRegex } from '@fullview/rrweb-snapshot';
+import {
+  isShadowRoot,
+  IGNORED_NODE,
+  classMatchesRegex,
+} from '@fullview/rrweb-snapshot';
 import type { RRNode, RRIFrameElement } from 'rrdom';
 
 export function on(
