@@ -13,7 +13,7 @@ function patchGLPrototype(
   prototype: WebGLRenderingContext | WebGL2RenderingContext,
   type: CanvasContext,
   cb: canvasManagerMutationCallback,
-  blockSelector: string | undefined,
+  blockSelector: string | null,
   mirror: Mirror,
   win: IWindow,
 ): listenerHandler[] {
@@ -86,7 +86,7 @@ function patchGLPrototype(
 export default function initCanvasWebGLMutationObserver(
   cb: canvasManagerMutationCallback,
   win: IWindow,
-  blockSelector: string | undefined,
+  blockSelector: string | null,
   mirror: Mirror,
 ): listenerHandler {
   const handlers: listenerHandler[] = [];

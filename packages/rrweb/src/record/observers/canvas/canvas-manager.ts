@@ -1,4 +1,4 @@
-import { ICanvas, Mirror, DataURLOptions } from '@fullview/rrweb-snapshot';
+import type { ICanvas, Mirror, DataURLOptions } from '@fullview/rrweb-snapshot';
 import {
   CanvasContext,
   canvasManagerMutationCallback,
@@ -10,7 +10,6 @@ import {
   CanvasArg,
 } from '@fullview/rrweb-types';
 import { isBlocked } from '../../../utils';
-import { CanvasContext } from '@fullview/rrweb-types';
 import initCanvas2DMutationObserver from './2d';
 import initCanvasContextObserver from './canvas';
 import initCanvasWebGLMutationObserver from './webgl';
@@ -59,7 +58,7 @@ export class CanvasManager {
     recordCanvas: boolean;
     mutationCb: canvasMutationCallback;
     win: IWindow;
-    blockSelector?: string;
+    blockSelector: string | null;
     mirror: Mirror;
     sampling?: 'all' | number;
     dataURLOptions: DataURLOptions;
@@ -102,7 +101,7 @@ export class CanvasManager {
   private initCanvasFPSObserver(
     fps: number,
     win: IWindow,
-    blockSelector?: string,
+    blockSelector: string | null,
     options: {
       dataURLOptions: DataURLOptions;
     },
@@ -220,7 +219,7 @@ export class CanvasManager {
 
   private initCanvasMutationObserver(
     win: IWindow,
-    blockSelector?: string,
+    blockSelector: string | null,
   ): void {
     this.startRAFTimestamping();
     this.startPendingCanvasMutationFlusher();

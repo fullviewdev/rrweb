@@ -254,7 +254,7 @@ export function transformAttribute(
 
 export function _isDeletedElement(
   element: HTMLElement,
-  deleteSelector: string | null | undefined,
+  deleteSelector: string | null,
 ): boolean {
   if (deleteSelector) {
     return element.matches(deleteSelector);
@@ -265,7 +265,7 @@ export function _isDeletedElement(
 
 export function _isBlockedElement(
   element: HTMLElement,
-  blockSelector: string | null | undefined,
+  blockSelector: string | null,
 ): boolean {
   if (blockSelector) {
     return element.matches(blockSelector);
@@ -409,7 +409,7 @@ function serializeNode(
   options: {
     doc: Document;
     mirror: Mirror;
-    blockSelector?: string | null;
+    blockSelector: string | null;
     deleteSelector: string | null;
     maskTextClass: string | RegExp;
     maskTextSelector: string | null;
@@ -576,8 +576,8 @@ function serializeElementNode(
   n: HTMLElement,
   options: {
     doc: Document;
-    blockSelector: string | null | undefined;
-    deleteSelector: string | null | undefined;
+    blockSelector: string | null;
+    deleteSelector: string | null;
     inlineStylesheet: boolean;
     maskInputOptions: MaskInputOptions;
     maskInputFn: MaskInputFn | undefined;
@@ -898,7 +898,7 @@ export function serializeNodeWithId(
   options: {
     doc: Document;
     mirror: Mirror;
-    blockSelector?: string | null;
+    blockSelector: string | null;
     deleteSelector: string | null;
     maskTextClass: string | RegExp;
     maskTextSelector: string | null;
@@ -1179,8 +1179,8 @@ function snapshot(
   n: Document,
   options?: {
     mirror?: Mirror;
-    blockSelector?: string;
-    deleteSelector?: string | null;
+    blockSelector: string | null;
+    deleteSelector: string | null;
     maskTextClass?: string | RegExp;
     maskTextSelector?: string | null;
     inlineStylesheet?: boolean;
@@ -1208,7 +1208,7 @@ function snapshot(
 ): serializedNodeWithId | null {
   const {
     mirror = new Mirror(),
-    blockSelector,
+    blockSelector = null,
     deleteSelector = null,
     maskTextClass = 'rr-mask',
     maskTextSelector = null,

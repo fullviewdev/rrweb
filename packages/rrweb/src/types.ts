@@ -41,8 +41,8 @@ export type recordOptions<T> = {
   emit?: (e: T, isCheckout?: boolean) => void;
   checkoutEveryNth?: number;
   checkoutEveryNms?: number;
-  blockSelector?: string;
-  deleteSelector?: string;
+  blockSelector?: string | null;
+  deleteSelector?: string | null;
   ignoreClass?: string;
   maskTextClass?: maskTextClass;
   maskTextSelector?: string;
@@ -77,7 +77,7 @@ export type observerParam = {
   inputCb: inputCallback;
   mediaInteractionCb: mediaInteractionCallback;
   selectionCb: selectionCallback;
-  blockSelector?: string;
+  blockSelector: string | null;
   deleteSelector: string | null;
   ignoreClass: string;
   maskTextClass: maskTextClass;

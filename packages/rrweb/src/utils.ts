@@ -8,7 +8,9 @@ import type {
   DeprecatedMirror,
   textMutation,
   eventWithTime,
-  EventType,
+} from '@fullview/rrweb-types';
+import {
+  EventType, IncrementalSource
 } from '@fullview/rrweb-types';
 import type { IMirror, Mirror } from '@fullview/rrweb-snapshot';
 import {
@@ -197,7 +199,7 @@ export function getWindowWidth(): number {
  */
 export function isBlocked(
   node: Node | null,
-  blockSelector: string | null | undefined,
+  blockSelector: string | null,
   checkAncestors: boolean,
 ): boolean {
   if (!node) {
