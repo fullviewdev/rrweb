@@ -1,4 +1,8 @@
-import { MaskInputOptions, maskInputValue, Mirror } from '@fullview/rrweb-snapshot';
+import {
+  MaskInputOptions,
+  maskInputValue,
+  Mirror,
+} from '@fullview/rrweb-snapshot';
 import type { FontFaceSet } from 'css-font-loading-module';
 import {
   throttle,
@@ -876,10 +880,7 @@ function initMediaInteractionObserver({
   const handler = (type: MediaInteractions) =>
     throttle((event: Event) => {
       const target = getEventTarget(event);
-      if (
-        !target ||
-        isBlocked(target as Node, blockSelector, true)
-      ) {
+      if (!target || isBlocked(target as Node, blockSelector, true)) {
         return;
       }
       const {
