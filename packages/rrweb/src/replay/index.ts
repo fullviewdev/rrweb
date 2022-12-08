@@ -8,7 +8,7 @@ import {
   createMirror,
   attributes,
   serializedElementNodeWithId,
-} from 'rrweb-snapshot';
+} from '@fullview/rrweb-snapshot';
 import {
   RRDocument,
   createOrGetNode,
@@ -26,7 +26,7 @@ import type {
   RRCanvasElement,
   ReplayerHandler,
   Mirror as RRDOMMirror,
-} from 'rrdom';
+} from '@fullview/rrdom';
 import * as mittProxy from 'mitt';
 import { polyfill as smoothscrollPolyfill } from './smoothscroll';
 import { Timer } from './timer';
@@ -75,6 +75,7 @@ import {
   getPositionsAndIndex,
   uniqueTextMutations,
   StyleSheetMirror,
+  isUserInteraction,
 } from '../utils';
 import getInjectStyleRules from './styles/inject-style';
 import './styles/style.css';
@@ -176,7 +177,6 @@ export class Replayer {
       skipInactive: false,
       showWarning: true,
       showDebug: false,
-      blockClass: 'rr-block',
       liveMode: false,
       insertStyleRules: [],
       triggerFocus: true,
@@ -519,6 +519,14 @@ export class Replayer {
     );
   }
 
+  public removeEvents(start: number, end: number) {
+    this.service.send({ type: 'REMOVE_EVENTS', payload: { start, end } });
+  }
+
+  public getAllEvents() {
+    return this.service.state.context.events;
+  }
+
   public enableInteract() {
     this.iframe.setAttribute('scrolling', 'auto');
     this.iframe.style.pointerEvents = 'auto';
@@ -666,7 +674,7 @@ export class Replayer {
               if (_event.timestamp <= event.timestamp) {
                 continue;
               }
-              if (this.isUserInteraction(_event)) {
+              if (isUserInteraction(_event)) {
                 if (
                   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                   _event.delay! - event.delay! >
@@ -2080,16 +2088,6 @@ export class Replayer {
       }
       currentEl = currentEl.parentElement;
     }
-  }
-
-  private isUserInteraction(event: eventWithTime): boolean {
-    if (event.type !== EventType.IncrementalSnapshot) {
-      return false;
-    }
-    return (
-      event.data.source > IncrementalSource.Mutation &&
-      event.data.source <= IncrementalSource.Input
-    );
   }
 
   private backToNormal() {

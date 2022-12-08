@@ -5,7 +5,7 @@ import type {
   MaskInputFn,
   MaskTextFn,
   DataURLOptions,
-} from 'rrweb-snapshot';
+} from '@fullview/rrweb-snapshot';
 import type { PackFn, UnpackFn } from './packer/base';
 import type { IframeManager } from './record/iframe-manager';
 import type { ShadowDomManager } from './record/shadow-dom-manager';
@@ -42,8 +42,8 @@ export type recordOptions<T> = {
   emit?: (e: T, isCheckout?: boolean) => void;
   checkoutEveryNth?: number;
   checkoutEveryNms?: number;
-  blockClass?: blockClass;
   blockSelector?: string;
+  deleteSelector?: string;
   ignoreClass?: string;
   maskTextClass?: maskTextClass;
   maskTextSelector?: string;
@@ -55,7 +55,7 @@ export type recordOptions<T> = {
   ignoreCSSAttributes?: Set<string>;
   inlineStylesheet?: boolean;
   hooks?: hooksParam;
-  packFn?: PackFn;
+  packFn?: PackFn<eventWithTime>;
   sampling?: SamplingStrategy;
   dataURLOptions?: DataURLOptions;
   recordCanvas?: boolean;
@@ -78,8 +78,8 @@ export type observerParam = {
   inputCb: inputCallback;
   mediaInteractionCb: mediaInteractionCallback;
   selectionCb: selectionCallback;
-  blockClass: blockClass;
-  blockSelector: string | null;
+  blockSelector?: string;
+  deleteSelector: string | null;
   ignoreClass: string;
   maskTextClass: maskTextClass;
   maskTextSelector: string | null;
@@ -120,8 +120,8 @@ export type observerParam = {
 export type MutationBufferParam = Pick<
   observerParam,
   | 'mutationCb'
-  | 'blockClass'
   | 'blockSelector'
+  | 'deleteSelector'
   | 'maskTextClass'
   | 'maskTextSelector'
   | 'inlineStylesheet'
@@ -161,7 +161,6 @@ export type playerConfig = {
   skipInactive: boolean;
   showWarning: boolean;
   showDebug: boolean;
-  blockClass: string;
   liveMode: boolean;
   insertStyleRules: string[];
   triggerFocus: boolean;
@@ -175,7 +174,7 @@ export type playerConfig = {
         lineWidth?: number;
         strokeStyle?: string;
       };
-  unpackFn?: UnpackFn;
+  unpackFn?: UnpackFn<eventWithTime>;
   useVirtualDom: boolean;
   plugins?: ReplayPlugin[];
 };

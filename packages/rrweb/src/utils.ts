@@ -2,15 +2,16 @@ import type {
   throttleOptions,
   listenerHandler,
   hookResetter,
-  blockClass,
   addedNodeMutation,
   DocumentDimension,
   IWindow,
   DeprecatedMirror,
   textMutation,
+  eventWithTime,
+  EventType,
 } from '@rrweb/types';
 import type { IMirror, Mirror } from 'rrweb-snapshot';
-import { isShadowRoot, IGNORED_NODE, classMatchesRegex } from 'rrweb-snapshot';
+import { isShadowRoot, IGNORED_NODE, classMatchesRegex } from '@fullview/rrweb-snapshot';
 import type { RRNode, RRIFrameElement } from 'rrdom';
 
 export function on(
@@ -186,15 +187,13 @@ export function getWindowWidth(): number {
 /**
  * Checks if the given element set to be blocked by rrweb
  * @param node - node to check
- * @param blockClass - class name to check
  * @param blockSelector - css selectors to check
  * @param checkAncestors - whether to search through parent nodes for the block class
  * @returns true/false if the node was blocked or not
  */
 export function isBlocked(
   node: Node | null,
-  blockClass: blockClass,
-  blockSelector: string | null,
+  blockSelector: string | null | undefined,
   checkAncestors: boolean,
 ): boolean {
   if (!node) {
@@ -206,12 +205,6 @@ export function isBlocked(
       : node.parentElement;
   if (!el) return false;
 
-  if (typeof blockClass === 'string') {
-    if (el.classList.contains(blockClass)) return true;
-    if (checkAncestors && el.closest('.' + blockClass) !== null) return true;
-  } else {
-    if (classMatchesRegex(el, blockClass, checkAncestors)) return true;
-  }
   if (blockSelector) {
     if ((node as HTMLElement).matches(blockSelector)) return true;
     if (checkAncestors && el.closest(blockSelector) !== null) return true;
@@ -495,4 +488,14 @@ export class StyleSheetMirror {
   generateId(): number {
     return this.id++;
   }
+}
+
+export function isUserInteraction(event: eventWithTime): boolean {
+  if (event.type !== EventType.IncrementalSnapshot) {
+    return false;
+  }
+  return (
+    event.data.source > IncrementalSource.Mutation &&
+    event.data.source <= IncrementalSource.Input
+  );
 }

@@ -7,7 +7,7 @@ import {
   maskInputValue,
   Mirror,
   isNativeShadowDom,
-} from 'rrweb-snapshot';
+} from '@fullview/rrweb-snapshot';
 import type { observerParam, MutationBufferParam } from '../types';
 import type {
   mutationRecord,
@@ -156,8 +156,8 @@ export default class MutationBuffer {
   private droppedSet = new Set<Node>();
 
   private mutationCb: observerParam['mutationCb'];
-  private blockClass: observerParam['blockClass'];
   private blockSelector: observerParam['blockSelector'];
+  private deleteSelector: observerParam['deleteSelector'];
   private maskTextClass: observerParam['maskTextClass'];
   private maskTextSelector: observerParam['maskTextSelector'];
   private inlineStylesheet: observerParam['inlineStylesheet'];
@@ -179,8 +179,8 @@ export default class MutationBuffer {
   public init(options: MutationBufferParam) {
     ([
       'mutationCb',
-      'blockClass',
       'blockSelector',
+      'deleteSelector',
       'maskTextClass',
       'maskTextSelector',
       'inlineStylesheet',
@@ -296,8 +296,8 @@ export default class MutationBuffer {
       const sn = serializeNodeWithId(n, {
         doc: this.doc,
         mirror: this.mirror,
-        blockClass: this.blockClass,
         blockSelector: this.blockSelector,
+        deleteSelector: this.deleteSelector,
         maskTextClass: this.maskTextClass,
         maskTextSelector: this.maskTextSelector,
         skipChild: true,
@@ -476,7 +476,7 @@ export default class MutationBuffer {
       case 'characterData': {
         const value = m.target.textContent;
         if (
-          !isBlocked(m.target, this.blockClass, this.blockSelector, false) &&
+          !isBlocked(m.target, this.blockSelector, false) &&
           value !== m.oldValue
         ) {
           this.texts.push({
@@ -508,7 +508,7 @@ export default class MutationBuffer {
           });
         }
         if (
-          isBlocked(m.target, this.blockClass, this.blockSelector, false) ||
+          isBlocked(m.target, this.blockSelector, false) ||
           value === m.oldValue
         ) {
           return;
@@ -594,7 +594,7 @@ export default class MutationBuffer {
             ? this.mirror.getId(m.target.host)
             : this.mirror.getId(m.target);
           if (
-            isBlocked(m.target, this.blockClass, this.blockSelector, false) ||
+            isBlocked(m.target, this.blockSelector, false) ||
             isIgnored(n, this.mirror) ||
             !isSerialized(n, this.mirror)
           ) {
@@ -647,6 +647,11 @@ export default class MutationBuffer {
    * Make sure you check if `n`'s parent is blocked before calling this function
    * */
   private genAdds = (n: Node, target?: Node) => {
+    // parent was blocked, so we can ignore this node
+    if (target && isBlocked(target, this.blockSelector, false)) {
+      return;
+    }
+
     if (this.mirror.hasNode(n)) {
       if (isIgnored(n, this.mirror)) {
         return;
@@ -666,7 +671,7 @@ export default class MutationBuffer {
 
     // if this node is blocked `serializeNode` will turn it into a placeholder element
     // but we have to remove it's children otherwise they will be added as placeholders too
-    if (!isBlocked(n, this.blockClass, this.blockSelector, false))
+    if (!isBlocked(n, this.blockSelector, false))
       n.childNodes.forEach((childN) => this.genAdds(childN));
   };
 }

@@ -1,4 +1,4 @@
-import { MaskInputOptions, maskInputValue, Mirror } from 'rrweb-snapshot';
+import { MaskInputOptions, maskInputValue, Mirror } from '@fullview/rrweb-snapshot';
 import type { FontFaceSet } from 'css-font-loading-module';
 import {
   throttle,
@@ -209,7 +209,6 @@ function initMouseInteractionObserver({
   mouseInteractionCb,
   doc,
   mirror,
-  blockClass,
   blockSelector,
   sampling,
 }: observerParam): listenerHandler {
@@ -228,7 +227,7 @@ function initMouseInteractionObserver({
   const getHandler = (eventKey: keyof typeof MouseInteractions) => {
     return (event: MouseEvent | TouchEvent) => {
       const target = getEventTarget(event) as Node;
-      if (isBlocked(target, blockClass, blockSelector, true)) {
+      if (isBlocked(target, blockSelector, true)) {
         return;
       }
       const e = isTouchEvent(event) ? event.changedTouches[0] : event;
@@ -266,16 +265,15 @@ export function initScrollObserver({
   scrollCb,
   doc,
   mirror,
-  blockClass,
   blockSelector,
   sampling,
 }: Pick<
   observerParam,
-  'scrollCb' | 'doc' | 'mirror' | 'blockClass' | 'blockSelector' | 'sampling'
+  'scrollCb' | 'doc' | 'mirror' | 'blockSelector' | 'sampling'
 >): listenerHandler {
   const updatePosition = throttle<UIEvent>((evt) => {
     const target = getEventTarget(evt);
-    if (!target || isBlocked(target as Node, blockClass, blockSelector, true)) {
+    if (!target || isBlocked(target as Node, blockSelector, true)) {
       return;
     }
     const id = mirror.getId(target as Node);
@@ -332,7 +330,6 @@ function initInputObserver({
   inputCb,
   doc,
   mirror,
-  blockClass,
   blockSelector,
   ignoreClass,
   maskInputOptions,
@@ -353,7 +350,7 @@ function initInputObserver({
       !target ||
       !(target as Element).tagName ||
       INPUT_TAGS.indexOf((target as Element).tagName) < 0 ||
-      isBlocked(target as Node, blockClass, blockSelector, true)
+      isBlocked(target as Node, blockSelector, true)
     ) {
       return;
     }
@@ -872,7 +869,6 @@ function initStyleDeclarationObserver(
 
 function initMediaInteractionObserver({
   mediaInteractionCb,
-  blockClass,
   blockSelector,
   mirror,
   sampling,
@@ -882,7 +878,7 @@ function initMediaInteractionObserver({
       const target = getEventTarget(event);
       if (
         !target ||
-        isBlocked(target as Node, blockClass, blockSelector, true)
+        isBlocked(target as Node, blockSelector, true)
       ) {
         return;
       }
@@ -991,8 +987,8 @@ function initSelectionObserver(param: observerParam): listenerHandler {
       const { startContainer, startOffset, endContainer, endOffset } = range;
 
       const blocked =
-        isBlocked(startContainer, blockClass, blockSelector, true) ||
-        isBlocked(endContainer, blockClass, blockSelector, true);
+        isBlocked(startContainer, blockSelector, true) ||
+        isBlocked(endContainer, blockSelector, true);
 
       if (blocked) continue;
 

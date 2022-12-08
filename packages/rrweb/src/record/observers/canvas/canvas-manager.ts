@@ -1,6 +1,6 @@
-import type { ICanvas, Mirror, DataURLOptions } from 'rrweb-snapshot';
-import type {
-  blockClass,
+import { ICanvas, Mirror, DataURLOptions } from '@fullview/rrweb-snapshot';
+import {
+  CanvasContext,
   canvasManagerMutationCallback,
   canvasMutationCallback,
   canvasMutationCommand,
@@ -59,8 +59,7 @@ export class CanvasManager {
     recordCanvas: boolean;
     mutationCb: canvasMutationCallback;
     win: IWindow;
-    blockClass: blockClass;
-    blockSelector: string | null;
+    blockSelector?: string;
     mirror: Mirror;
     sampling?: 'all' | number;
     dataURLOptions: DataURLOptions;
@@ -68,7 +67,6 @@ export class CanvasManager {
     const {
       sampling = 'all',
       win,
-      blockClass,
       blockSelector,
       recordCanvas,
       dataURLOptions,
@@ -77,9 +75,9 @@ export class CanvasManager {
     this.mirror = options.mirror;
 
     if (recordCanvas && sampling === 'all')
-      this.initCanvasMutationObserver(win, blockClass, blockSelector);
+      this.initCanvasMutationObserver(win, blockSelector);
     if (recordCanvas && typeof sampling === 'number')
-      this.initCanvasFPSObserver(sampling, win, blockClass, blockSelector, {
+      this.initCanvasFPSObserver(sampling, win, blockSelector, {
         dataURLOptions,
       });
   }
@@ -104,17 +102,12 @@ export class CanvasManager {
   private initCanvasFPSObserver(
     fps: number,
     win: IWindow,
-    blockClass: blockClass,
-    blockSelector: string | null,
+    blockSelector?: string,
     options: {
       dataURLOptions: DataURLOptions;
     },
   ) {
-    const canvasContextReset = initCanvasContextObserver(
-      win,
-      blockClass,
-      blockSelector,
-    );
+    const canvasContextReset = initCanvasContextObserver(win, blockSelector);
     const snapshotInProgressMap: Map<number, boolean> = new Map();
     const worker = new ImageBitmapDataURLWorker() as ImageBitmapDataURLRequestWorker;
     worker.onmessage = (e) => {
@@ -227,28 +220,21 @@ export class CanvasManager {
 
   private initCanvasMutationObserver(
     win: IWindow,
-    blockClass: blockClass,
-    blockSelector: string | null,
+    blockSelector?: string,
   ): void {
     this.startRAFTimestamping();
     this.startPendingCanvasMutationFlusher();
 
-    const canvasContextReset = initCanvasContextObserver(
-      win,
-      blockClass,
-      blockSelector,
-    );
+    const canvasContextReset = initCanvasContextObserver(win, blockSelector);
     const canvas2DReset = initCanvas2DMutationObserver(
       this.processMutation.bind(this),
       win,
-      blockClass,
       blockSelector,
     );
 
     const canvasWebGL1and2Reset = initCanvasWebGLMutationObserver(
       this.processMutation.bind(this),
       win,
-      blockClass,
       blockSelector,
       this.mirror,
     );

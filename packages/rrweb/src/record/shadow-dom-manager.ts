@@ -10,8 +10,8 @@ import {
   initAdoptedStyleSheetObserver,
 } from './observer';
 import { patch } from '../utils';
-import type { Mirror } from 'rrweb-snapshot';
-import { isNativeShadowDom } from 'rrweb-snapshot';
+import type { Mirror } from '@fullview/rrweb-snapshot';
+import { isNativeShadowDom } from '@fullview/rrweb-snapshot';
 
 type BypassOptions = Omit<
   MutationBufferParam,

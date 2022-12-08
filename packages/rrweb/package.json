@@ -87,6 +87,6 @@
     "fflate": "^0.4.4",
     "mitt": "^3.0.0",
     "rrdom": "^0.1.7",
-    "rrweb-snapshot": "^2.0.0-alpha.4"
+    "@fullview/rrweb-snapshot": "^2.0.0-alpha.4"
   }
 }

@@ -3,7 +3,7 @@ import {
   MaskInputOptions,
   SlimDOMOptions,
   createMirror,
-} from 'rrweb-snapshot';
+} from '@fullview/rrweb-snapshot';
 import { initObservers, mutationBuffers } from './observer';
 import {
   on,
@@ -53,8 +53,8 @@ function record<T = eventWithTime>(
     emit,
     checkoutEveryNms,
     checkoutEveryNth,
-    blockClass = 'rr-block',
     blockSelector = null,
+    deleteSelector = null,
     ignoreClass = 'rr-ignore',
     maskTextClass = 'rr-mask',
     maskTextSelector = null,
@@ -287,7 +287,6 @@ function record<T = eventWithTime>(
     recordCanvas,
     mutationCb: wrappedCanvasMutationEmit,
     win: window,
-    blockClass,
     blockSelector,
     mirror,
     sampling: sampling.canvas,
@@ -298,8 +297,8 @@ function record<T = eventWithTime>(
     mutationCb: wrappedMutationEmit,
     scrollCb: wrappedScrollEmit,
     bypassOptions: {
-      blockClass,
       blockSelector,
+      deleteSelector,
       maskTextClass,
       maskTextSelector,
       inlineStylesheet,
@@ -338,8 +337,8 @@ function record<T = eventWithTime>(
     mutationBuffers.forEach((buf) => buf.lock()); // don't allow any mirror modifications during snapshotting
     const node = snapshot(document, {
       mirror,
-      blockClass,
       blockSelector,
+      deleteSelector,
       maskTextClass,
       maskTextSelector,
       inlineStylesheet,
@@ -534,6 +533,7 @@ function record<T = eventWithTime>(
           maskTextFn,
           keepIframeSrcFn,
           blockSelector,
+          deleteSelector,
           slimDOMOptions,
           dataURLOptions,
           mirror,
@@ -629,6 +629,28 @@ record.takeFullSnapshot = (isCheckout?: boolean) => {
     throw new Error('please take full snapshot after start recording');
   }
   takeFullSnapshot(isCheckout);
+};
+
+record.takeScrollSnapshot = (target: HTMLElement) => {
+  if (!wrappedEmit) {
+    throw new Error('please take scroll snapshot after start recording');
+  }
+
+  const p: scrollPosition = {
+    id: mirror.getId(target),
+    x: target.scrollLeft,
+    y: target.scrollTop,
+  };
+
+  wrappedEmit(
+    wrapEvent({
+      type: EventType.IncrementalSnapshot,
+      data: {
+        source: IncrementalSource.Scroll,
+        ...p,
+      },
+    }),
+  );
 };
 
 record.mirror = mirror;

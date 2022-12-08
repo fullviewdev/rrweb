@@ -20,6 +20,7 @@ import {
   maskInputValue,
   isNativeShadowDom,
   getCssRulesString,
+  isBlocked,
 } from './utils';
 
 let _id = 1;
@@ -251,23 +252,21 @@ export function transformAttribute(
   }
 }
 
+export function _isDeletedElement(
+  element: HTMLElement,
+  deleteSelector: string | null,
+): boolean {
+  if (deleteSelector) {
+    return element.matches(deleteSelector);
+  }
+
+  return false;
+}
+
 export function _isBlockedElement(
   element: HTMLElement,
-  blockClass: string | RegExp,
-  blockSelector: string | null,
+  blockSelector: string | null | undefined,
 ): boolean {
-  if (typeof blockClass === 'string') {
-    if (element.classList.contains(blockClass)) {
-      return true;
-    }
-  } else {
-    for (let eIndex = element.classList.length; eIndex--; ) {
-      const className = element.classList[eIndex];
-      if (blockClass.test(className)) {
-        return true;
-      }
-    }
-  }
   if (blockSelector) {
     return element.matches(blockSelector);
   }
@@ -410,8 +409,8 @@ function serializeNode(
   options: {
     doc: Document;
     mirror: Mirror;
-    blockClass: string | RegExp;
-    blockSelector: string | null;
+    blockSelector?: string;
+    deleteSelector: string | null;
     maskTextClass: string | RegExp;
     maskTextSelector: string | null;
     inlineStylesheet: boolean;
@@ -431,8 +430,8 @@ function serializeNode(
   const {
     doc,
     mirror,
-    blockClass,
     blockSelector,
+    deleteSelector,
     maskTextClass,
     maskTextSelector,
     inlineStylesheet,
@@ -472,7 +471,6 @@ function serializeNode(
     case n.ELEMENT_NODE:
       return serializeElementNode(n as HTMLElement, {
         doc,
-        blockClass,
         blockSelector,
         inlineStylesheet,
         maskInputOptions,
@@ -577,8 +575,7 @@ function serializeElementNode(
   n: HTMLElement,
   options: {
     doc: Document;
-    blockClass: string | RegExp;
-    blockSelector: string | null;
+    blockSelector: string | null | undefined;
     inlineStylesheet: boolean;
     maskInputOptions: MaskInputOptions;
     maskInputFn: MaskInputFn | undefined;
@@ -595,7 +592,6 @@ function serializeElementNode(
 ): serializedNode | false {
   const {
     doc,
-    blockClass,
     blockSelector,
     inlineStylesheet,
     maskInputOptions = {},
@@ -607,7 +603,7 @@ function serializeElementNode(
     newlyAddedElement = false,
     rootId,
   } = options;
-  const needBlock = _isBlockedElement(n, blockClass, blockSelector);
+  const needBlock = _isBlockedElement(n, blockSelector);
   const tagName = getValidTagName(n);
   let attributes: attributes = {};
   const len = n.attributes.length;
@@ -897,8 +893,8 @@ export function serializeNodeWithId(
   options: {
     doc: Document;
     mirror: Mirror;
-    blockClass: string | RegExp;
-    blockSelector: string | null;
+    blockSelector?: string;
+    deleteSelector: string | null;
     maskTextClass: string | RegExp;
     maskTextSelector: string | null;
     skipChild: boolean;
@@ -929,8 +925,8 @@ export function serializeNodeWithId(
   const {
     doc,
     mirror,
-    blockClass,
     blockSelector,
+    deleteSelector,
     maskTextClass,
     maskTextSelector,
     skipChild = false,
@@ -954,8 +950,8 @@ export function serializeNodeWithId(
   const _serializedNode = serializeNode(n, {
     doc,
     mirror,
-    blockClass,
     blockSelector,
+    deleteSelector,
     maskTextClass,
     maskTextSelector,
     inlineStylesheet,
@@ -988,6 +984,10 @@ export function serializeNodeWithId(
     id = IGNORED_NODE;
   } else {
     id = genId();
+  }
+
+  if (_serializedNode.type === NodeType.Element && _serializedNode.needDelete) {
+    return null;
   }
 
   const serializedNode = Object.assign(_serializedNode, { id });
@@ -1026,8 +1026,8 @@ export function serializeNodeWithId(
     const bypassOptions = {
       doc,
       mirror,
-      blockClass,
       blockSelector,
+      deleteSelector,
       maskTextClass,
       maskTextSelector,
       skipChild,
@@ -1086,8 +1086,8 @@ export function serializeNodeWithId(
           const serializedIframeNode = serializeNodeWithId(iframeDoc, {
             doc: iframeDoc,
             mirror,
-            blockClass,
             blockSelector,
+            deleteSelector,
             maskTextClass,
             maskTextSelector,
             skipChild: false,
@@ -1133,8 +1133,8 @@ export function serializeNodeWithId(
           const serializedLinkNode = serializeNodeWithId(n, {
             doc,
             mirror,
-            blockClass,
             blockSelector,
+            deleteSelector,
             maskTextClass,
             maskTextSelector,
             skipChild: false,
@@ -1174,8 +1174,8 @@ function snapshot(
   n: Document,
   options?: {
     mirror?: Mirror;
-    blockClass?: string | RegExp;
-    blockSelector?: string | null;
+    blockSelector?: string;
+    deleteSelector?: string | null;
     maskTextClass?: string | RegExp;
     maskTextSelector?: string | null;
     inlineStylesheet?: boolean;
@@ -1203,8 +1203,8 @@ function snapshot(
 ): serializedNodeWithId | null {
   const {
     mirror = new Mirror(),
-    blockClass = 'rr-block',
-    blockSelector = null,
+    blockSelector,
+    deleteSelector = null,
     maskTextClass = 'rr-mask',
     maskTextSelector = null,
     inlineStylesheet = true,
@@ -1269,8 +1269,8 @@ function snapshot(
   return serializeNodeWithId(n, {
     doc: n,
     mirror,
-    blockClass,
     blockSelector,
+    deleteSelector,
     maskTextClass,
     maskTextSelector,
     skipChild: false,
