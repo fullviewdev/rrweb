@@ -8,16 +8,16 @@ import {
   serializedNodeWithId,
   createMirror,
   Mirror,
-} from 'rrweb-snapshot';
+} from '@fullview/rrweb-snapshot';
 import type { IRRNode } from '../src/document';
-import { Replayer } from 'rrweb';
+import { Replayer } from '@fullview/rrweb';
 import type {
   eventWithTime,
   canvasMutationData,
   styleDeclarationData,
   styleSheetRuleData,
-} from '@rrweb/types';
-import { EventType, IncrementalSource } from '@rrweb/types';
+} from '@fullview/rrweb-types';
+import { EventType, IncrementalSource } from '@fullview/rrweb-types';
 
 const elementSn = {
   type: RRNodeType.Element,

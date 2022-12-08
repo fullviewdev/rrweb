@@ -9,14 +9,14 @@ import type {
   textMutation,
   eventWithTime,
   EventType,
-} from '@rrweb/types';
-import type { IMirror, Mirror } from 'rrweb-snapshot';
+} from '@fullview/rrweb-types';
+import type { IMirror, Mirror } from '@fullview/rrweb-snapshot';
 import {
   isShadowRoot,
   IGNORED_NODE,
   classMatchesRegex,
 } from '@fullview/rrweb-snapshot';
-import type { RRNode, RRIFrameElement } from 'rrdom';
+import type { RRNode, RRIFrameElement } from '@fullview/rrdom';
 
 export function on(
   type: string,

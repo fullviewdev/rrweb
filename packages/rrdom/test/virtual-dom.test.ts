@@ -18,7 +18,7 @@ import {
   NodeType,
   NodeType as RRNodeType,
   textNode,
-} from 'rrweb-snapshot';
+} from '@fullview/rrweb-snapshot';
 import {
   buildFromDom,
   buildFromNode,

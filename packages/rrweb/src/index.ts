@@ -8,7 +8,7 @@ export {
   IncrementalSource,
   MouseInteractions,
   ReplayerEvents,
-} from '@rrweb/types';
+} from '@fullview/rrweb-types';
 
 const { addCustomEvent } = record;
 const { freezePage } = record;

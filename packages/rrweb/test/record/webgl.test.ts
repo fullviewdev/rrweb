@@ -8,7 +8,7 @@ import {
   EventType,
   IncrementalSource,
   CanvasContext,
-} from '@rrweb/types';
+} from '@fullview/rrweb-types';
 import {
   assertSnapshot,
   launchPuppeteer,

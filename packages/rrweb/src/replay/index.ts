@@ -16,7 +16,7 @@ import {
   buildFromDom,
   diff,
   getDefaultSN,
-} from 'rrdom';
+} from '@fullview/rrdom';
 import type {
   RRNode,
   RRElement,
@@ -62,7 +62,7 @@ import {
   styleSheetRuleData,
   styleDeclarationData,
   adoptedStyleSheetData,
-} from '@rrweb/types';
+} from '@fullview/rrweb-types';
 import {
   polyfill,
   queueToResolveTrees,

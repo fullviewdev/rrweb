@@ -41,7 +41,7 @@ import {
   IWindow,
   SelectionRange,
   selectionCallback,
-} from '@rrweb/types';
+} from '@fullview/rrweb-types';
 import MutationBuffer from './mutation';
 
 type WindowWithStoredMutationObserver = IWindow & {

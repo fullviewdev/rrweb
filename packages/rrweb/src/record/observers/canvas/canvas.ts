@@ -1,5 +1,5 @@
 import type { ICanvas } from '@fullview/rrweb-snapshot';
-import type { IWindow, listenerHandler } from '@rrweb/types';
+import type { IWindow, listenerHandler } from '@fullview/rrweb-types';
 import { isBlocked, patch } from '../../../utils';
 
 export default function initCanvasContextObserver(

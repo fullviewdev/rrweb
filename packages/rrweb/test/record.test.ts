@@ -10,7 +10,7 @@ import {
   IncrementalSource,
   styleSheetRuleData,
   selectionData,
-} from '@rrweb/types';
+} from '@fullview/rrweb-types';
 import {
   assertSnapshot,
   getServerURL,

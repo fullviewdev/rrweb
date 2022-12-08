@@ -1,4 +1,4 @@
-import { NodeType as RRNodeType, Mirror as NodeMirror } from 'rrweb-snapshot';
+import { NodeType as RRNodeType, Mirror as NodeMirror } from '@fullview/rrweb-snapshot';
 import type {
   canvasMutationData,
   canvasEventWithTime,
@@ -6,7 +6,7 @@ import type {
   scrollData,
   styleDeclarationData,
   styleSheetRuleData,
-} from '@rrweb/types';
+} from '@fullview/rrweb-types';
 import type {
   IRRCDATASection,
   IRRComment,

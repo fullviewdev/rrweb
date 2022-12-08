@@ -1,5 +1,5 @@
 {
-  "name": "@rrweb/types",
+  "name": "@fullview/rrweb-types",
   "version": "2.0.0-alpha.4",
   "keywords": [
     "rrweb",
@@ -12,7 +12,6 @@
     "prepublish": "npm run build",
     "lint": "yarn eslint src/**/*.ts"
   },
-  "homepage": "https://github.com/rrweb-io/rrweb/tree/main/packages/@rrweb/types#readme",
   "bugs": {
     "url": "https://github.com/rrweb-io/rrweb/issues"
   },
@@ -41,7 +40,7 @@
     "vite-plugin-dts": "^1.6.6"
   },
   "dependencies": {
-    "rrweb-snapshot": "^2.0.0-alpha.4"
+    "@fullview/rrweb-snapshot": "^2.0.0-alpha.4"
   },
   "browserslist": [
     "supports es6-class"

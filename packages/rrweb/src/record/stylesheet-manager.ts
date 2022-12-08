@@ -1,11 +1,11 @@
-import type { elementNode, serializedNodeWithId } from 'rrweb-snapshot';
-import { getCssRuleString } from 'rrweb-snapshot';
+import type { elementNode, serializedNodeWithId } from '@fullview/rrweb-snapshot';
+import { getCssRuleString } from '@fullview/rrweb-snapshot';
 import type {
   adoptedStyleSheetCallback,
   adoptedStyleSheetParam,
   attributeMutation,
   mutationCallBack,
-} from '@rrweb/types';
+} from '@fullview/rrweb-types';
 import { StyleSheetMirror } from '../utils';
 
 export class StylesheetManager {

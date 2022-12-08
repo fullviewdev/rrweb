@@ -17,7 +17,7 @@ import type {
   addedNodeMutation,
   styleAttributeValue,
   Optional,
-} from '@rrweb/types';
+} from '@fullview/rrweb-types';
 import {
   isBlocked,
   isAncestorRemoved,

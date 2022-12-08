@@ -25,7 +25,7 @@ import {
   scrollCallback,
   canvasMutationParam,
   adoptedStyleSheetParam,
-} from '@rrweb/types';
+} from '@fullview/rrweb-types';
 import type { CrossOriginIframeMessageEventContent } from '../types';
 import { IframeManager } from './iframe-manager';
 import { ShadowDomManager } from './shadow-dom-manager';
