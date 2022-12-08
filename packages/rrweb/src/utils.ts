@@ -9,9 +9,7 @@ import type {
   textMutation,
   eventWithTime,
 } from '@fullview/rrweb-types';
-import {
-  EventType, IncrementalSource
-} from '@fullview/rrweb-types';
+import { EventType, IncrementalSource } from '@fullview/rrweb-types';
 import type { IMirror, Mirror } from '@fullview/rrweb-snapshot';
 import {
   isShadowRoot,
