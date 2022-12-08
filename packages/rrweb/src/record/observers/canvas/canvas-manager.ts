@@ -153,7 +153,7 @@ export class CanvasManager {
     const getCanvas = (): HTMLCanvasElement[] => {
       const matchedCanvas: HTMLCanvasElement[] = [];
       win.document.querySelectorAll('canvas').forEach((canvas) => {
-        if (!isBlocked(canvas, blockClass, blockSelector, true)) {
+        if (!isBlocked(canvas, blockSelector, true)) {
           matchedCanvas.push(canvas);
         }
       });

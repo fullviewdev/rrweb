@@ -893,7 +893,7 @@ export function serializeNodeWithId(
   options: {
     doc: Document;
     mirror: Mirror;
-    blockSelector?: string;
+    blockSelector?: string | null;
     deleteSelector: string | null;
     maskTextClass: string | RegExp;
     maskTextSelector: string | null;

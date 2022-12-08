@@ -15,7 +15,6 @@ import type { CanvasManager } from './record/observers/canvas/canvas-manager';
 import type { StylesheetManager } from './record/stylesheet-manager';
 import type {
   addedNodeMutation,
-  blockClass,
   canvasMutationCallback,
   eventWithTime,
   fontCallback,

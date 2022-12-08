@@ -806,9 +806,7 @@ export class Replayer {
     documentElement: HTMLElement | RRElement,
     head: HTMLHeadElement | RRElement,
   ) {
-    const injectStylesRules = getInjectStyleRules(
-      this.config.blockClass,
-    ).concat(this.config.insertStyleRules);
+    const injectStylesRules = getInjectStyleRules().concat(this.config.insertStyleRules);
     if (this.config.pauseAnimation) {
       injectStylesRules.push(
         'html.rrweb-paused *, html.rrweb-paused *:before, html.rrweb-paused *:after { animation-play-state: paused !important; }',

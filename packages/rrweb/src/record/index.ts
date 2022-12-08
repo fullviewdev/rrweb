@@ -49,11 +49,11 @@ const mirror = createMirror();
 function record<T = eventWithTime>(
   options: recordOptions<T> = {},
 ): listenerHandler | undefined {
+  const blockSelector: string | null | undefined = null;
   const {
     emit,
     checkoutEveryNms,
     checkoutEveryNth,
-    blockSelector = null,
     deleteSelector = null,
     ignoreClass = 'rr-ignore',
     maskTextClass = 'rr-mask',
@@ -517,7 +517,6 @@ function record<T = eventWithTime>(
               }),
             );
           },
-          blockClass,
           ignoreClass,
           maskTextClass,
           maskTextSelector,

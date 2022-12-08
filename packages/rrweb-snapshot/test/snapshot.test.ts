@@ -182,8 +182,8 @@ describe('scrollTop/scrollLeft', () => {
     return serializeNodeWithId(node, {
       doc: document,
       mirror: new Mirror(),
-      blockClass: 'blockblock',
       blockSelector: null,
+      deleteSelector: null,
       maskTextClass: 'maskmask',
       maskTextSelector: null,
       skipChild: false,
