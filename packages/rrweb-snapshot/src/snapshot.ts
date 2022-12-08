@@ -254,7 +254,7 @@ export function transformAttribute(
 
 export function _isDeletedElement(
   element: HTMLElement,
-  deleteSelector: string | null,
+  deleteSelector: string | null | undefined,
 ): boolean {
   if (deleteSelector) {
     return element.matches(deleteSelector);
@@ -409,7 +409,7 @@ function serializeNode(
   options: {
     doc: Document;
     mirror: Mirror;
-    blockSelector?: string;
+    blockSelector?: string | null;
     deleteSelector: string | null;
     maskTextClass: string | RegExp;
     maskTextSelector: string | null;
@@ -472,6 +472,7 @@ function serializeNode(
       return serializeElementNode(n as HTMLElement, {
         doc,
         blockSelector,
+        deleteSelector,
         inlineStylesheet,
         maskInputOptions,
         maskInputFn,
@@ -576,6 +577,7 @@ function serializeElementNode(
   options: {
     doc: Document;
     blockSelector: string | null | undefined;
+    deleteSelector: string | null | undefined;
     inlineStylesheet: boolean;
     maskInputOptions: MaskInputOptions;
     maskInputFn: MaskInputFn | undefined;
@@ -593,6 +595,7 @@ function serializeElementNode(
   const {
     doc,
     blockSelector,
+    deleteSelector,
     inlineStylesheet,
     maskInputOptions = {},
     maskInputFn,
@@ -604,6 +607,7 @@ function serializeElementNode(
     rootId,
   } = options;
   const needBlock = _isBlockedElement(n, blockSelector);
+  const needDelete = _isDeletedElement(n as HTMLElement, deleteSelector);
   const tagName = getValidTagName(n);
   let attributes: attributes = {};
   const len = n.attributes.length;
@@ -785,6 +789,7 @@ function serializeElementNode(
     childNodes: [],
     isSVG: isSVGElement(n as Element) || undefined,
     needBlock,
+    needDelete,
     rootId,
   };
 }
