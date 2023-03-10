@@ -3455,6 +3455,13 @@
     estree-walker "^2.0.1"
     picomatch "^2.2.2"
 
+"@rrweb/types@npm:@fullview/rrweb-types@^2.0.0-alpha.6":
+  version "2.0.0-alpha.6"
+  resolved "https://registry.yarnpkg.com/@fullview/rrweb-types/-/rrweb-types-2.0.0-alpha.6.tgz#82051969edf8f3fbb4992cd190bd609033cd7932"
+  integrity sha512-pazDhFgv08AbGaZ78W060EWMUQwDviDw6pzAr0KFg5PH9dMN9UsMvqMm7na//CqucqbjJaEpug8FnEk3aS3sIQ==
+  dependencies:
+    rrweb-snapshot "npm:@fullview/rrweb-snapshot@^2.0.0-alpha.6"
+
 "@rushstack/node-core-library@3.53.2", "@rushstack/node-core-library@^3.53.2":
   version "3.53.2"
   resolved "https://registry.yarnpkg.com/@rushstack/node-core-library/-/node-core-library-3.53.2.tgz#f442e121f9e6c8bef9a23b7337e6399ab5c0c579"
@@ -13834,6 +13841,25 @@ rollup@~2.78.0:
   integrity sha512-VeeCgtGi4P+o9hIg+xz4qQpRl6R401LWEXBmxYKOV4zlF82lyhgh2hTZnheFUbANE8l2A41F458iwj2vEYaXJg==
   optionalDependencies:
     fsevents "~2.3.2"
+
+rrdom@^2.0.0-alpha.6:
+  version "2.0.0-alpha.6"
+  resolved "https://registry.yarnpkg.com/rrdom/-/rrdom-2.0.0-alpha.6.tgz#80d2efc1afe94ab617622d256375837b19299b9b"
+  integrity sha512-b7eFnFbWQ5/t7abHgioeGPxsYUPj0sSf0yLjX+n1bKkC2zS3NBETdSK1KGMmBdLRgjxpKDh061EVKoA1AG65JQ==
+  dependencies:
+    rrweb-snapshot "^2.0.0-alpha.6"
+
+"rrdom@npm:@fullview/rrdom@^2.0.0-alpha.6":
+  version "2.0.0-alpha.6"
+  resolved "https://registry.yarnpkg.com/@fullview/rrdom/-/rrdom-2.0.0-alpha.6.tgz#6edd14ba08e0e97686b934ae0e478334091940e1"
+  integrity sha512-b1X/coXhx2I8kykLGemFG8w+5sAT8C/WHw7BU6zYJajay//Xtwq/R+HYYDtZN3RRHOVxT/+V5VJ7tVrX36n+nQ==
+  dependencies:
+    rrweb-snapshot "npm:@fullview/rrweb-snapshot@^2.0.0-alpha.6"
+
+rrweb-snapshot@^2.0.0-alpha.6, "rrweb-snapshot@npm:@fullview/rrweb-snapshot@^2.0.0-alpha.6":
+  version "2.0.0-alpha.6"
+  resolved "https://registry.yarnpkg.com/@fullview/rrweb-snapshot/-/rrweb-snapshot-2.0.0-alpha.6.tgz#dd518299bfd1f13c1300820e8aec47ccbc6da8e2"
+  integrity sha512-t46ibQ9DEgWVjfW5XGF5Uakob/0LfWw+d6e0BQp1yZyVEra57kPnlKyVAeQBWYddINPWWVII8gW4DatO/u/0Yg==
 
 run-async@^2.4.0:
   version "2.4.1"
