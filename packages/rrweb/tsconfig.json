@@ -31,9 +31,5 @@
     "src",
     "node_modules/@types/css-font-loading-module/index.d.ts",
     "node_modules/@types/jest-image-snapshot/index.d.ts"
-  ],
-  "baseUrl": ".",
-  "paths": {
-    "@rrweb/types/*": ["node_modules/@fullview/rrweb-types/*"]
-  }
+  ]
 }
