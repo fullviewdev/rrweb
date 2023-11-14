@@ -1096,6 +1096,14 @@ export function serializeNodeWithId(
       stylesheetLoadTimeout,
       keepIframeSrcFn,
     };
+    let childNodes = Array.from(n.childNodes) as Node[];
+    childNodes = childNodes.filter(
+      // filter out nodes that are assigned to a slot other places.
+      (childN) => !(childN as HTMLElement).assignedSlot,
+    );
+    if (n instanceof HTMLSlotElement)
+      // add nodes that are assigned to this slot and treat them as normal children.
+      childNodes = childNodes.concat(Array.from(n.assignedNodes()));
     for (const childN of Array.from(n.childNodes)) {
       const serializedChildNode = serializeNodeWithId(childN, bypassOptions);
       if (serializedChildNode) {
