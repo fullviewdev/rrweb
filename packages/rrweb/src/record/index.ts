@@ -237,6 +237,7 @@ function record<T = eventWithTime>(
   };
 
   const wrappedMutationEmit = (m: mutationCallbackParam) => {
+    console.log('wrappedMutationEmit', m);
     wrappedEmit(
       wrapEvent({
         type: EventType.IncrementalSnapshot,

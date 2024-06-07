@@ -112,6 +112,7 @@ export function initMutationObserver(
   ) => MutationObserver)(
     callbackWrapper(mutationBuffer.processMutations.bind(mutationBuffer)),
   );
+  console.log('gg.observe()');
   observer.observe(rootEl, {
     attributes: true,
     attributeOldValue: true,
@@ -1243,6 +1244,7 @@ export function initObservers(
 
   return callbackWrapper(() => {
     mutationBuffers.forEach((b) => b.reset());
+    console.log('mutationObserver.disconnect()');
     mutationObserver.disconnect();
     mousemoveHandler();
     mouseInteractionHandler();

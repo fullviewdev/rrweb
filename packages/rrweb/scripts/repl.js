@@ -6,6 +6,7 @@ import { EventEmitter } from 'node:events';
 import inquirer from 'inquirer';
 import puppeteer from 'puppeteer';
 import { fileURLToPath } from 'url';
+import { setTimeout } from 'timers/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,7 +33,8 @@ void (async () => {
           const s = document.createElement('script');
           let r = false;
           s.type = 'text/javascript';
-          s.innerHTML = code;
+          s.id = 'batman';
+          s.src = 'http://127.0.0.1/rrweb.js';
           if (document.head) {
             document.head.append(s);
           } else {
@@ -43,22 +45,24 @@ void (async () => {
         }
         loadScript(rrwebCode);
 
-        win.events = [];
-        rrweb.record({
-          emit: (event) => {
-            win.events.push(event);
-            win._replLog(event);
-          },
-          plugins: [],
-          recordCanvas: true,
-          recordCrossOriginIframes: true,
-          collectFonts: true,
-        });
+        setTimeout(() => {
+          win.events = [];
+          rrweb.record({
+            emit: (event) => {
+              win.events.push(event);
+              win._replLog(event);
+            },
+            plugins: [],
+            recordCanvas: true,
+            recordCrossOriginIframes: true,
+            collectFonts: true,
+          });
+        }, 1000);
       })();
     }, code);
   }
 
-  await start('https://react-redux.realworld.io');
+  await start('https://alpha-app.rexsoftware.com/notes/#page=1');
 
   const fakeGoto = async (page, url) => {
     const intercept = async (request) => {
@@ -145,6 +149,9 @@ void (async () => {
         width: 1600,
         height: 900,
       },
+      devtools: true,
+      executablePath:
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
       args: [
         '--start-maximized',
         '--ignore-certificate-errors',
