@@ -29,12 +29,11 @@ void (async () => {
       win.__IS_RECORDING__ = true;
 
       (async () => {
-        function loadScript(code) {
+        function loadScript() {
           const s = document.createElement('script');
-          let r = false;
           s.type = 'text/javascript';
           s.id = 'batman';
-          s.src = 'http://127.0.0.1/rrweb.js';
+          s.src = 'http://127.0.0.1:8080/rrweb.js';
           if (document.head) {
             document.head.append(s);
           } else {
@@ -56,6 +55,10 @@ void (async () => {
             recordCanvas: true,
             recordCrossOriginIframes: true,
             collectFonts: true,
+            largeMutationsConfig: {
+              limit: 1000,
+              fullSnapshotCb: 1000,
+            },
           });
         }, 1000);
       })();
