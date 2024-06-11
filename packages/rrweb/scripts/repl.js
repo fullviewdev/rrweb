@@ -32,7 +32,7 @@ void (async () => {
         function loadScript() {
           const s = document.createElement('script');
           s.type = 'text/javascript';
-          s.id = 'batman';
+          s.id = 'rrweb';
           s.src = 'http://127.0.0.1:8080/rrweb.js';
           if (document.head) {
             document.head.append(s);

@@ -1243,7 +1243,6 @@ export function initObservers(
 
   return callbackWrapper(() => {
     mutationBuffers.forEach((b) => b.reset());
-    console.log('mutationObserver.disconnect()');
     mutationObserver.disconnect();
     mousemoveHandler();
     mouseInteractionHandler();
