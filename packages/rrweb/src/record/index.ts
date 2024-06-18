@@ -440,7 +440,10 @@ function record<T = eventWithTime>(
 
   const debounceFullSnapshot =
     options.largeMutationsConfig &&
-    debounce(() => takeFullSnapshot(), options.largeMutationsConfig.fullSnapshotDebounce);
+    debounce(
+      () => takeFullSnapshot(),
+      options.largeMutationsConfig.fullSnapshotDebounce,
+    );
 
   try {
     const handlers: listenerHandler[] = [];
