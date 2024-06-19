@@ -58,9 +58,6 @@ export class IframeManager {
     iframeEl: HTMLIFrameElement,
     childSn: serializedNodeWithId,
   ) {
-    if (this.attachedIframes.has(iframeEl)) return;
-    this.attachedIframes.add(iframeEl);
-
     this.mutationCb({
       adds: [
         {
