@@ -8,7 +8,6 @@ import type { StylesheetManager } from './stylesheet-manager';
 
 export class IframeManager {
   private iframes: WeakMap<HTMLIFrameElement, true> = new WeakMap();
-  private attachedIframes: WeakSet<HTMLIFrameElement> = new WeakSet();
   private crossOriginIframeMap: WeakMap<MessageEventSource, HTMLIFrameElement> =
     new WeakMap();
   public crossOriginIframeMirror = new CrossOriginIframeMirror(genId);
