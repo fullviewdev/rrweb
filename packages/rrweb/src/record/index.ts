@@ -445,15 +445,15 @@ function record<T = eventWithTime>(
       options.largeMutationsConfig.fullSnapshotDebounce,
     );
 
-  const observers = new WeakMap<Document, listenerHandler>();
+  const observerHandlers = new WeakMap<Document, listenerHandler>();
 
   try {
     const handlers: listenerHandler[] = [];
 
     const observe = (doc: Document, preventStackedObservers?: boolean) => {
-      if (preventStackedObservers) observers.get(doc)?.();
+      if (preventStackedObservers) observerHandlers.get(doc)?.();
 
-      const initiatedObserver = initObservers(
+      const observerHandler = initObservers(
         {
           mutationCb: wrappedMutationEmit,
           mousemoveCb: (positions, source) =>
@@ -600,9 +600,9 @@ function record<T = eventWithTime>(
         hooks,
       );
 
-      observers.set(doc, initiatedObserver);
+      observerHandlers.set(doc, observerHandler);
 
-      return initiatedObserver;
+      return observerHandler;
     };
 
     iframeManager.addLoadListener((iframeEl) => {
