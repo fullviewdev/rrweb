@@ -600,7 +600,7 @@ function record<T = eventWithTime>(
         hooks,
       );
 
-      observerHandlers.set(doc, observerHandler);
+      if (preventStackedObservers) observerHandlers.set(doc, observerHandler);
 
       return observerHandler;
     };
