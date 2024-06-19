@@ -8,7 +8,7 @@ import type { StylesheetManager } from './stylesheet-manager';
 
 export class IframeManager {
   private iframes: WeakMap<HTMLIFrameElement, true> = new WeakMap();
-  private attachedIframes: WeakMap<HTMLIFrameElement, true> = new WeakMap();
+  private attachedIframes: WeakSet<HTMLIFrameElement> = new WeakSet();
   private crossOriginIframeMap: WeakMap<MessageEventSource, HTMLIFrameElement> =
     new WeakMap();
   public crossOriginIframeMirror = new CrossOriginIframeMirror(genId);
@@ -45,9 +45,7 @@ export class IframeManager {
   }
 
   public addIframe(iframeEl: HTMLIFrameElement) {
-    if (this.iframes.has(iframeEl)) return;
     this.iframes.set(iframeEl, true);
-
     if (iframeEl.contentWindow)
       this.crossOriginIframeMap.set(iframeEl.contentWindow, iframeEl);
   }
@@ -61,7 +59,7 @@ export class IframeManager {
     childSn: serializedNodeWithId,
   ) {
     if (this.attachedIframes.has(iframeEl)) return;
-    this.attachedIframes.set(iframeEl, true);
+    this.attachedIframes.add(iframeEl);
 
     this.mutationCb({
       adds: [
