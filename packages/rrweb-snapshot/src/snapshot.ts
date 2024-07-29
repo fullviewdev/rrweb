@@ -381,6 +381,18 @@ export function needMaskingText(
   return false;
 }
 
+const iframesWithLoadListeners: WeakSet<HTMLIFrameElement> = new WeakSet();
+
+function addIframeLoadListener(
+  iframeEl: HTMLIFrameElement,
+  listener: () => unknown,
+) {
+  if (!iframesWithLoadListeners.has(iframeEl)) {
+    iframesWithLoadListeners.add(iframeEl);
+    iframeEl.addEventListener('load', listener);
+  }
+}
+
 // https://stackoverflow.com/a/36155560
 function onceIframeLoaded(
   iframeEl: HTMLIFrameElement,
@@ -407,7 +419,7 @@ function onceIframeLoaded(
         fired = true;
       }
     }, iframeLoadTimeout);
-    iframeEl.addEventListener('load', () => {
+    addIframeLoadListener(iframeEl, () => {
       clearTimeout(timer);
       fired = true;
       listener();
@@ -425,10 +437,10 @@ function onceIframeLoaded(
     // till _after_ the mutation that found this iframe has had time to process
     setTimeout(listener, 0);
 
-    return iframeEl.addEventListener('load', listener); // keep listing for future loads
+    return addIframeLoadListener(iframeEl, listener); // keep listing for future loads
   }
   // use default listener
-  iframeEl.addEventListener('load', listener);
+  addIframeLoadListener(iframeEl, listener);
 }
 
 function onceStylesheetLoaded(
