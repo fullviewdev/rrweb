@@ -613,10 +613,7 @@ export class Replayer {
     }
 
     this.iframe = document.createElement('iframe');
-    const attributes = ['allow-same-origin'];
-    if (this.config.UNSAFE_replayCanvas) {
-      attributes.push('allow-scripts');
-    }
+    const attributes = ['allow-same-origin allow-scripts'];
     // hide iframe before first meta event
     this.iframe.style.display = 'none';
     this.iframe.setAttribute('sandbox', attributes.join(' '));
