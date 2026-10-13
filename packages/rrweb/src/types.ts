@@ -1,3 +1,4 @@
+import type { styleSheetRuleEmitOptions } from './record/stylesheet-diff';
 import type {
   Mirror,
   MaskInputOptions,
@@ -79,6 +80,8 @@ export type recordOptions<T> = {
     limit: number;
     fullSnapshotDebounce: number;
   };
+  /** How stylesheet-rule events are produced; see `record/stylesheet-diff.ts`. Default: per call. */
+  styleSheetRuleEmit?: styleSheetRuleEmitOptions;
 };
 
 export type observerParam = {
@@ -94,6 +97,7 @@ export type observerParam = {
     limit: number;
     fullSnapshotCb?: () => void;
   };
+  styleSheetRuleEmit?: styleSheetRuleEmitOptions;
   blockClass: blockClass;
   blockSelector: string | null;
   deleteSelector: string | null;
@@ -163,6 +167,7 @@ export type MutationBufferParam = Pick<
   | 'canvasManager'
   | 'processedNodeManager'
   | 'largeMutationsConfig'
+  | 'styleSheetRuleEmit'
 >;
 
 export type ReplayPlugin = {

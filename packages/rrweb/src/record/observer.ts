@@ -51,6 +51,7 @@ import type {
   customElementCallback,
 } from '@rrweb/types';
 import MutationBuffer from './mutation';
+import { StyleSheetDiffTracker } from './stylesheet-diff';
 import { callbackWrapper } from './error-handler';
 import {
   parentElement,
@@ -59,6 +60,13 @@ import {
 } from '@rrweb/utils';
 
 export const mutationBuffers: MutationBuffer[] = [];
+
+/** One per observed document when `styleSheetRuleEmit.mode` is `frame`; the recorder flushes them. */
+export const styleSheetDiffTrackers: StyleSheetDiffTracker[] = [];
+const styleSheetDiffTrackerByDoc = new WeakMap<
+  Document,
+  StyleSheetDiffTracker
+>();
 
 // Event.path is non-standard and used in some older browsers
 type NonStandardEvent = Omit<Event, 'composedPath'> & {
@@ -601,7 +609,13 @@ function getIdAndStyleId(
 }
 
 function initStyleSheetObserver(
-  { styleSheetRuleCb, mirror, stylesheetManager }: observerParam,
+  {
+    styleSheetRuleCb,
+    mirror,
+    stylesheetManager,
+    styleSheetRuleEmit,
+    doc,
+  }: observerParam,
   { win }: { win: IWindow },
 ): listenerHandler {
   if (!win.CSSStyleSheet || !win.CSSStyleSheet.prototype) {
@@ -610,6 +624,24 @@ function initStyleSheetObserver(
       // Do nothing
     };
   }
+
+  // Frame mode: a rule call marks its sheet dirty and the tracker emits the net change once per
+  // frame. A sheet the tracker declines (too large, unreadable) falls through to the per-call
+  // events below, so the two paths never both describe one sheet.
+  let tracker: StyleSheetDiffTracker | undefined;
+  if (styleSheetRuleEmit?.mode === 'frame') {
+    tracker = new StyleSheetDiffTracker(
+      styleSheetRuleCb,
+      doc,
+      styleSheetRuleEmit,
+    );
+    styleSheetDiffTrackers.push(tracker);
+    styleSheetDiffTrackerByDoc.set(doc, tracker);
+  }
+  const tracked = (
+    sheet: CSSStyleSheet | null | undefined,
+    ids: { id?: number; styleId?: number },
+  ) => !!tracker && !!sheet && tracker.touch(sheet, ids);
 
   // eslint-disable-next-line @typescript-eslint/unbound-method
   const insertRule = win.CSSStyleSheet.prototype.insertRule;
@@ -629,6 +661,15 @@ function initStyleSheetObserver(
         );
 
         if ((id && id !== -1) || (styleId && styleId !== -1)) {
+          if (tracked(thisArg, { id, styleId })) {
+            const at = target.apply(thisArg, argumentsList);
+            try {
+              tracker?.rememberRaw(thisArg.cssRules[at], rule);
+            } catch {
+              // an unreadable sheet is already on the per-call path
+            }
+            return at;
+          }
           styleSheetRuleCb({
             id,
             styleId,
@@ -658,11 +699,13 @@ function initStyleSheetObserver(
         );
 
         if ((id && id !== -1) || (styleId && styleId !== -1)) {
-          styleSheetRuleCb({
-            id,
-            styleId,
-            removes: [{ index }],
-          });
+          if (!tracked(thisArg, { id, styleId })) {
+            styleSheetRuleCb({
+              id,
+              styleId,
+              removes: [{ index }],
+            });
+          }
         }
         return target.apply(thisArg, argumentsList);
       },
@@ -690,11 +733,13 @@ function initStyleSheetObserver(
           );
 
           if ((id && id !== -1) || (styleId && styleId !== -1)) {
-            styleSheetRuleCb({
-              id,
-              styleId,
-              replace: text,
-            });
+            if (!tracked(thisArg, { id, styleId })) {
+              styleSheetRuleCb({
+                id,
+                styleId,
+                replace: text,
+              });
+            }
           }
           return target.apply(thisArg, argumentsList);
         },
@@ -722,11 +767,13 @@ function initStyleSheetObserver(
           );
 
           if ((id && id !== -1) || (styleId && styleId !== -1)) {
-            styleSheetRuleCb({
-              id,
-              styleId,
-              replaceSync: text,
-            });
+            if (!tracked(thisArg, { id, styleId })) {
+              styleSheetRuleCb({
+                id,
+                styleId,
+                replaceSync: text,
+              });
+            }
           }
           return target.apply(thisArg, argumentsList);
         },
@@ -788,19 +835,23 @@ function initStyleSheetObserver(
             );
 
             if ((id && id !== -1) || (styleId && styleId !== -1)) {
-              styleSheetRuleCb({
-                id,
-                styleId,
-                adds: [
-                  {
-                    rule,
-                    index: [
-                      ...getNestedCSSRulePositions(thisArg),
-                      index || 0, // defaults to 0
-                    ],
-                  },
-                ],
-              });
+              if (tracked(thisArg.parentStyleSheet, { id, styleId })) {
+                tracker?.forgetRaw(thisArg);
+              } else {
+                styleSheetRuleCb({
+                  id,
+                  styleId,
+                  adds: [
+                    {
+                      rule,
+                      index: [
+                        ...getNestedCSSRulePositions(thisArg),
+                        index || 0, // defaults to 0
+                      ],
+                    },
+                  ],
+                });
+              }
             }
             return target.apply(thisArg, argumentsList);
           },
@@ -826,13 +877,17 @@ function initStyleSheetObserver(
             );
 
             if ((id && id !== -1) || (styleId && styleId !== -1)) {
-              styleSheetRuleCb({
-                id,
-                styleId,
-                removes: [
-                  { index: [...getNestedCSSRulePositions(thisArg), index] },
-                ],
-              });
+              if (tracked(thisArg.parentStyleSheet, { id, styleId })) {
+                tracker?.forgetRaw(thisArg);
+              } else {
+                styleSheetRuleCb({
+                  id,
+                  styleId,
+                  removes: [
+                    { index: [...getNestedCSSRulePositions(thisArg), index] },
+                  ],
+                });
+              }
             }
             return target.apply(thisArg, argumentsList);
           },
@@ -842,6 +897,12 @@ function initStyleSheetObserver(
   });
 
   return callbackWrapper(() => {
+    if (tracker) {
+      tracker.dispose();
+      const at = styleSheetDiffTrackers.indexOf(tracker);
+      if (at !== -1) styleSheetDiffTrackers.splice(at, 1);
+      styleSheetDiffTrackerByDoc.delete(doc);
+    }
     win.CSSStyleSheet.prototype.insertRule = insertRule;
     win.CSSStyleSheet.prototype.deleteRule = deleteRule;
     replace && (win.CSSStyleSheet.prototype.replace = replace);
@@ -924,9 +985,18 @@ function initStyleDeclarationObserver(
     mirror,
     ignoreCSSAttributes,
     stylesheetManager,
+    doc,
   }: observerParam,
   { win }: { win: IWindow },
 ): listenerHandler {
+  // Frame mode: a declaration edit on a rule of a tracked sheet reaches the player through the
+  // sheet diff (the rule's text changes), never as its own event, which the tracker's baseline
+  // would not know about.
+  const tracker = styleSheetDiffTrackerByDoc.get(doc);
+  const tracked = (
+    sheet: CSSStyleSheet | null | undefined,
+    ids: { id?: number; styleId?: number },
+  ) => !!tracker && !!sheet && tracker.touch(sheet, ids);
   // eslint-disable-next-line @typescript-eslint/unbound-method
   const setProperty = win.CSSStyleDeclaration.prototype.setProperty;
   win.CSSStyleDeclaration.prototype.setProperty = new Proxy(setProperty, {
@@ -948,17 +1018,21 @@ function initStyleDeclarationObserver(
           stylesheetManager.styleMirror,
         );
         if ((id && id !== -1) || (styleId && styleId !== -1)) {
-          styleDeclarationCb({
-            id,
-            styleId,
-            set: {
-              property,
-              value,
-              priority,
-            },
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            index: getNestedCSSRulePositions(thisArg.parentRule!),
-          });
+          if (tracked(thisArg.parentRule?.parentStyleSheet, { id, styleId })) {
+            tracker?.forgetRaw(thisArg.parentRule);
+          } else {
+            styleDeclarationCb({
+              id,
+              styleId,
+              set: {
+                property,
+                value,
+                priority,
+              },
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              index: getNestedCSSRulePositions(thisArg.parentRule!),
+            });
+          }
         }
         return target.apply(thisArg, argumentsList);
       },
@@ -986,15 +1060,19 @@ function initStyleDeclarationObserver(
           stylesheetManager.styleMirror,
         );
         if ((id && id !== -1) || (styleId && styleId !== -1)) {
-          styleDeclarationCb({
-            id,
-            styleId,
-            remove: {
-              property,
-            },
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            index: getNestedCSSRulePositions(thisArg.parentRule!),
-          });
+          if (tracked(thisArg.parentRule?.parentStyleSheet, { id, styleId })) {
+            tracker?.forgetRaw(thisArg.parentRule);
+          } else {
+            styleDeclarationCb({
+              id,
+              styleId,
+              remove: {
+                property,
+              },
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              index: getNestedCSSRulePositions(thisArg.parentRule!),
+            });
+          }
         }
         return target.apply(thisArg, argumentsList);
       },

@@ -4,7 +4,11 @@ import {
   type SlimDOMOptions,
   createMirror,
 } from 'rrweb-snapshot';
-import { initObservers, mutationBuffers } from './observer';
+import {
+  initObservers,
+  mutationBuffers,
+  styleSheetDiffTrackers,
+} from './observer';
 import {
   on,
   getWindowWidth,
@@ -205,6 +209,45 @@ function record<T = eventWithTime>(
   };
   wrappedEmit = (r: eventWithoutTime, isCheckout?: boolean) => {
     const e = r as eventWithTime;
+
+    // Before this event is stamped: the diffs it forces out go through here too and must carry
+    // an earlier timestamp. A held stylesheet diff must never follow an event that depends on the
+    // sheet as it stands: a mutation may remove the style element, a mouse event may be what the
+    // player pauses on. Every other source flushes the trackers first.
+    if (
+      styleSheetDiffTrackers.length > 0 &&
+      e.type === EventType.IncrementalSnapshot &&
+      e.data.source !== IncrementalSource.StyleSheetRule
+    ) {
+      // A mutation that rewrites a <style> element's text (its text node changed, added or
+      // removed) replaces the whole sheet on both sides: the player re-parses the text, so the
+      // sheet it will hold is the live one, and whatever the tracker still had pending for that
+      // sheet is superseded. Reseed before flushing, so no diff describes the rewrite twice.
+      if (e.data.source === IncrementalSource.Mutation) {
+        const rewritten: CSSStyleSheet[] = [];
+        const noteStyle = (node: Node | null | undefined) => {
+          const style = node as HTMLStyleElement | null | undefined;
+          if (style && style.nodeName === 'STYLE' && style.sheet) {
+            rewritten.push(style.sheet);
+          }
+        };
+        e.data.texts.forEach((text) =>
+          noteStyle(mirror.getNode(text.id)?.parentNode),
+        );
+        e.data.adds.forEach((add) => noteStyle(mirror.getNode(add.parentId)));
+        e.data.removes.forEach((remove) =>
+          noteStyle(mirror.getNode(remove.parentId)),
+        );
+        if (rewritten.length) {
+          styleSheetDiffTrackers.forEach((tracker) =>
+            tracker.reseed(rewritten),
+          );
+        }
+      }
+
+      styleSheetDiffTrackers.forEach((tracker) => tracker.flushAll());
+    }
+
     e.timestamp = nowTimestamp();
 
     if (!!options.largeMutationsConfig && e.type === EventType.FullSnapshot) {
@@ -377,6 +420,10 @@ function record<T = eventWithTime>(
       isCheckout,
     );
 
+    // Pending stylesheet diffs describe the sheets before this snapshot; emitted after it they
+    // would re-apply what the snapshot already carries.
+    styleSheetDiffTrackers.forEach((tracker) => tracker.flushAll());
+
     // When we take a full snapshot, old tracked StyleSheets need to be removed.
     stylesheetManager.reset();
 
@@ -435,6 +482,14 @@ function record<T = eventWithTime>(
       isCheckout,
     );
     mutationBuffers.forEach((buf) => buf.unlock()); // generate & emit any mutations that happened during snapshotting, as can now apply against the newly built mirror
+
+    // The snapshot serialised every sheet as it is now, so that is the state the player holds.
+    if (styleSheetDiffTrackers.length > 0) {
+      const sheets = Array.from(document.styleSheets).concat(
+        Array.from(document.adoptedStyleSheets || []),
+      );
+      styleSheetDiffTrackers.forEach((tracker) => tracker.reseed(sheets));
+    }
 
     // Some old browsers don't support adoptedStyleSheets.
     if (document.adoptedStyleSheets && document.adoptedStyleSheets.length > 0)
@@ -549,6 +604,7 @@ function record<T = eventWithTime>(
                 },
               });
             },
+            styleSheetRuleEmit: options.styleSheetRuleEmit,
             largeMutationsConfig: options.largeMutationsConfig && {
               limit: options.largeMutationsConfig.limit,
               fullSnapshotCb: debounceFullSnapshot,
@@ -620,6 +676,17 @@ function record<T = eventWithTime>(
       handlers.push(observe(document));
       recording = true;
     };
+
+    if (options.styleSheetRuleEmit?.mode === 'frame') {
+      // A closing tab must not take its last frame of stylesheet changes with it.
+      handlers.push(
+        on(
+          'pagehide',
+          () => styleSheetDiffTrackers.forEach((tracker) => tracker.flushAll()),
+          window,
+        ),
+      );
+    }
     if (
       document.readyState === 'interactive' ||
       document.readyState === 'complete'
