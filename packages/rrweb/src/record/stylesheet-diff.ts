@@ -10,7 +10,10 @@ export type styleSheetRuleEmitOptions = {
   /**
    * A sheet with more rules than this is left on the `call` path. Reading every rule's text once a
    * frame is what the diff costs, and on a very large sheet that a CSS-in-JS runtime touches every
-   * frame it would cost more than the events it saves.
+   * frame it would cost more than the events it saves. Measured in headless Chrome, read plus
+   * compare per dirty sheet: 300 rules 0.6 ms (1 ms at 4x CPU throttling), 2,000 rules 2.4 ms
+   * (7 ms), 5,000 rules 4.7 ms (17.5 ms, a whole frame), 30,000 rules 29 ms (126 ms). The churn
+   * this exists for runs on sheets of a few hundred rules.
    */
   maxRules?: number;
   /** Adds are emitted in events of at most this many rules, so one frame of page load cannot
@@ -19,7 +22,7 @@ export type styleSheetRuleEmitOptions = {
 };
 
 export const defaultStyleSheetRuleEmitOptions = {
-  maxRules: 5000,
+  maxRules: 2000,
   maxRulesPerEvent: 500,
 };
 
@@ -118,9 +121,14 @@ export class StyleSheetDiffTracker {
     if (this.scheduled) return;
     this.scheduled = true;
 
+    // `touch` runs inside the proxy before the original call has applied, so a flush can never be
+    // synchronous: it would read the sheet as it was. In a hidden document requestAnimationFrame
+    // never fires and timers are throttled, so the flush rides a microtask instead, which runs
+    // once the current task's calls have all applied and is never throttled. That coalesces per
+    // task rather than per frame, which is still one diff per churn cycle.
     const win = this.doc.defaultView;
     if (this.doc.visibilityState === 'hidden' || !win) {
-      this.flushAll();
+      void Promise.resolve().then(() => this.flushAll());
       return;
     }
     win.requestAnimationFrame(() => this.flushAll());

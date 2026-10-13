@@ -214,17 +214,31 @@ describe('StyleSheetDiffTracker', () => {
     expect(tracker.touch(crossOrigin, { id: 1 })).toBe(false);
   });
 
-  it('flushes synchronously in a hidden document', () => {
+  it('flushes on a microtask in a hidden document, after the call has applied', async () => {
     const hidden = new StyleSheetDiffTracker(
       (p) => emitted.push(p),
       { ...doc, visibilityState: 'hidden' } as unknown as Document,
       { mode: 'frame' },
     );
     const sheet = fakeSheet(['a{}']);
+    // As the proxies do: touch first, then the original call applies, twice in one task.
     hidden.touch(sheet, { id: 1 });
-    sheet.list.push({ cssText: 'b{}' });
+    sheet.list.unshift({ cssText: 'h1{}' });
     hidden.touch(sheet, { id: 1 });
-    expect(emitted).toEqual([{ id: 1, adds: [{ rule: 'b{}', index: 1 }] }]);
+    sheet.list.unshift({ cssText: 'h2{}' });
+    expect(emitted).toEqual([]);
+    expect(raf).toBeUndefined();
+
+    await Promise.resolve();
+    expect(emitted).toEqual([
+      {
+        id: 1,
+        adds: [
+          { rule: 'h2{}', index: 0 },
+          { rule: 'h1{}', index: 1 },
+        ],
+      },
+    ]);
     hidden.dispose();
   });
 

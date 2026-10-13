@@ -209,26 +209,9 @@ function record<T = eventWithTime>(
   };
   wrappedEmit = (r: eventWithoutTime, isCheckout?: boolean) => {
     const e = r as eventWithTime;
-    e.timestamp = nowTimestamp();
 
-    if (!!options.largeMutationsConfig && e.type === EventType.FullSnapshot) {
-      mutationBuffers.forEach((buf) => (buf.freezeMutations = false));
-    }
-
-    if (
-      mutationBuffers[0]?.isFrozen() &&
-      e.type !== EventType.FullSnapshot &&
-      !(
-        e.type === EventType.IncrementalSnapshot &&
-        e.data.source === IncrementalSource.Mutation
-      )
-    ) {
-      // we've got a user initiated event so first we need to apply
-      // all DOM changes that have been buffering during paused state
-      mutationBuffers.forEach((buf) => buf.unfreeze());
-    }
-
-    // A held stylesheet diff must never follow an event that depends on the sheet as it stands:
+    // Before this event is stamped: the diffs it forces out go through here too and must carry
+    // an earlier timestamp. A held stylesheet diff must never follow an event that depends on the sheet as it stands:
     // a style-declaration event addresses a rule by index, a mutation may remove the style
     // element. Every other source flushes the trackers first.
     if (
@@ -257,6 +240,25 @@ function record<T = eventWithTime>(
           );
         }
       }
+    }
+
+    e.timestamp = nowTimestamp();
+
+    if (!!options.largeMutationsConfig && e.type === EventType.FullSnapshot) {
+      mutationBuffers.forEach((buf) => (buf.freezeMutations = false));
+    }
+
+    if (
+      mutationBuffers[0]?.isFrozen() &&
+      e.type !== EventType.FullSnapshot &&
+      !(
+        e.type === EventType.IncrementalSnapshot &&
+        e.data.source === IncrementalSource.Mutation
+      )
+    ) {
+      // we've got a user initiated event so first we need to apply
+      // all DOM changes that have been buffering during paused state
+      mutationBuffers.forEach((buf) => buf.unfreeze());
     }
 
     if (inEmittingFrame) {
