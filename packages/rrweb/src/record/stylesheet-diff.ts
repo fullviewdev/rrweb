@@ -29,6 +29,21 @@ export const defaultStyleSheetRuleEmitOptions = {
 type sheetIds = { id?: number; styleId?: number };
 
 /**
+ * One rule as the tracker sees it: `key` is the browser's serialisation and is what two reads are
+ * compared on, `text` is what the player is given, the author's text where the rule came in
+ * through insertRule. A rule deleted and re-inserted with the same text keeps the same key, so the
+ * churn this exists for is still identity whatever form the sheet started in.
+ */
+type ruleEntry = { key: string; text: string };
+
+/**
+ * The tracker that owns a sheet. Observers can stack on one window (an iframe's initial document
+ * and its real one share the window), and then every call reaches two trackers; only the first
+ * to see a sheet may describe it.
+ */
+const sheetOwner = new WeakMap<CSSStyleSheet, StyleSheetDiffTracker>();
+
+/**
  * Per-frame diff of touched stylesheets, replacing per-call rule events.
  *
  * Why: CSS-in-JS runtimes do far more CSSOM work than the sheet's state ever reflects. One
@@ -51,7 +66,15 @@ type sheetIds = { id?: number; styleId?: number };
  * requestAnimationFrame never fires there and a held frame would surface with a stale timestamp.
  */
 export class StyleSheetDiffTracker {
-  private lastEmitted = new WeakMap<CSSStyleSheet, string[]>();
+  private lastEmitted = new WeakMap<CSSStyleSheet, ruleEntry[]>();
+  /**
+   * The text a rule was inserted with, by rule object. Chrome serialises a shorthand set to a
+   * custom property (`border: var(--x) solid`) with empty longhands, and re-inserting that
+   * `cssText` drops the declaration, so a rule that came in through insertRule keeps the author's
+   * text until something edits it in place. Rules parsed from a style element's text or from
+   * replaceSync have no raw text and use `cssText`, exactly as the snapshot already does.
+   */
+  private rawText = new WeakMap<CSSRule, string>();
   private passthrough = new WeakSet<CSSStyleSheet>();
   private dirty = new Map<CSSStyleSheet, sheetIds>();
   private scheduled = false;
@@ -78,6 +101,13 @@ export class StyleSheetDiffTracker {
   touch(sheet: CSSStyleSheet, ids: sheetIds): boolean {
     if (this.disposed || this.passthrough.has(sheet)) return false;
 
+    const owner = sheetOwner.get(sheet);
+    if (owner && owner !== this && !owner.disposed) {
+      // Another live tracker describes this sheet; this call is already accounted for.
+      return true;
+    }
+    sheetOwner.set(sheet, this);
+
     if (!this.lastEmitted.has(sheet)) {
       const rules = this.read(sheet);
       if (!rules) return false;
@@ -87,6 +117,23 @@ export class StyleSheetDiffTracker {
     this.dirty.set(sheet, ids);
     this.schedule();
     return true;
+  }
+
+  /** Called by the insertRule proxies after the original call, with the rule it produced. */
+  rememberRaw(rule: CSSRule | undefined, text: string): void {
+    if (rule) this.rawText.set(rule, text);
+  }
+
+  /**
+   * A rule edited in place (a declaration set, a nested rule inserted or deleted) no longer
+   * matches its raw text, and neither does any rule that contains it.
+   */
+  forgetRaw(rule: CSSRule | null | undefined): void {
+    let current: CSSRule | null | undefined = rule;
+    while (current) {
+      this.rawText.delete(current);
+      current = current.parentRule;
+    }
   }
 
   /** Emits the net change of every dirty sheet now. */
@@ -151,7 +198,10 @@ export class StyleSheetDiffTracker {
     // from the end of the sheet backwards, so every index is still right when the player reaches
     // it, whatever happened to later hunks. Nothing about this depends on any other event, so two
     // events with the same timestamp can be reordered downstream without harm.
-    const hunks = diffRules(before, now);
+    const hunks = diffRules(
+      before.map((entry) => entry.key),
+      now.map((entry) => entry.key),
+    );
     if (hunks.length === 0) return;
 
     const adds: { rule: string; index: number }[] = [];
@@ -160,8 +210,11 @@ export class StyleSheetDiffTracker {
     // after everything an earlier hunk touches, so they never move an earlier hunk's indices.
     for (let h = hunks.length - 1; h >= 0; h--) {
       const hunk = hunks[h];
-      hunk.adds.forEach((rule, k) =>
-        adds.push({ rule, index: hunk.at + hunk.removes + k }),
+      hunk.adds.forEach((_, k) =>
+        adds.push({
+          rule: now[hunk.nowAt + k].text,
+          index: hunk.at + hunk.removes + k,
+        }),
       );
     }
     // Removes, later hunks first too, but by then every hunk's adds are in, and the adds of the
@@ -194,8 +247,8 @@ export class StyleSheetDiffTracker {
     }
   }
 
-  /** The sheet's rules as text, or undefined when it cannot or should not be read. */
-  private read(sheet: CSSStyleSheet): string[] | undefined {
+  /** The sheet's rules, or undefined when it cannot or should not be read. */
+  private read(sheet: CSSStyleSheet): ruleEntry[] | undefined {
     let rules: CSSRuleList;
     try {
       rules = sheet.cssRules;
@@ -207,8 +260,11 @@ export class StyleSheetDiffTracker {
       this.passthrough.add(sheet);
       return undefined;
     }
-    const out = new Array<string>(rules.length);
-    for (let i = 0; i < rules.length; i++) out[i] = rules[i].cssText;
+    const out = new Array<ruleEntry>(rules.length);
+    for (let i = 0; i < rules.length; i++) {
+      const key = rules[i].cssText;
+      out[i] = { key, text: this.rawText.get(rules[i]) ?? key };
+    }
     return out;
   }
 }
@@ -216,6 +272,8 @@ export class StyleSheetDiffTracker {
 export type ruleHunk = {
   /** Index in the sheet as it was, where the hunk starts. */
   at: number;
+  /** Index in the sheet as it is now, where the hunk's adds start. */
+  nowAt: number;
   removes: number;
   adds: string[];
 };
@@ -252,7 +310,9 @@ export function diffRules(before: string[], now: string[]): ruleHunk[] {
 
   const script =
     a.length + b.length <= maxDiffSize ? editScript(a, b) : undefined;
-  if (!script) return [{ at: prefix, removes: a.length, adds: b }];
+  if (!script) {
+    return [{ at: prefix, nowAt: prefix, removes: a.length, adds: b }];
+  }
 
   const hunks: ruleHunk[] = [];
   let open: ruleHunk | undefined;
@@ -266,7 +326,7 @@ export function diffRules(before: string[], now: string[]): ruleHunk[] {
       continue;
     }
     if (!open) {
-      open = { at: prefix + ai, removes: 0, adds: [] };
+      open = { at: prefix + ai, nowAt: prefix + bi, removes: 0, adds: [] };
       hunks.push(open);
     }
     if (op === '-') {

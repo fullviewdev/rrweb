@@ -661,13 +661,20 @@ function initStyleSheetObserver(
         );
 
         if ((id && id !== -1) || (styleId && styleId !== -1)) {
-          if (!tracked(thisArg, { id, styleId })) {
-            styleSheetRuleCb({
-              id,
-              styleId,
-              adds: [{ rule, index }],
-            });
+          if (tracked(thisArg, { id, styleId })) {
+            const at = target.apply(thisArg, argumentsList);
+            try {
+              tracker?.rememberRaw(thisArg.cssRules[at], rule);
+            } catch {
+              // an unreadable sheet is already on the per-call path
+            }
+            return at;
           }
+          styleSheetRuleCb({
+            id,
+            styleId,
+            adds: [{ rule, index }],
+          });
         }
         return target.apply(thisArg, argumentsList);
       },
@@ -828,7 +835,9 @@ function initStyleSheetObserver(
             );
 
             if ((id && id !== -1) || (styleId && styleId !== -1)) {
-              if (!tracked(thisArg.parentStyleSheet, { id, styleId })) {
+              if (tracked(thisArg.parentStyleSheet, { id, styleId })) {
+                tracker?.forgetRaw(thisArg);
+              } else {
                 styleSheetRuleCb({
                   id,
                   styleId,
@@ -868,7 +877,9 @@ function initStyleSheetObserver(
             );
 
             if ((id && id !== -1) || (styleId && styleId !== -1)) {
-              if (!tracked(thisArg.parentStyleSheet, { id, styleId })) {
+              if (tracked(thisArg.parentStyleSheet, { id, styleId })) {
+                tracker?.forgetRaw(thisArg);
+              } else {
                 styleSheetRuleCb({
                   id,
                   styleId,
@@ -1007,7 +1018,9 @@ function initStyleDeclarationObserver(
           stylesheetManager.styleMirror,
         );
         if ((id && id !== -1) || (styleId && styleId !== -1)) {
-          if (!tracked(thisArg.parentRule?.parentStyleSheet, { id, styleId })) {
+          if (tracked(thisArg.parentRule?.parentStyleSheet, { id, styleId })) {
+            tracker?.forgetRaw(thisArg.parentRule);
+          } else {
             styleDeclarationCb({
               id,
               styleId,
@@ -1047,7 +1060,9 @@ function initStyleDeclarationObserver(
           stylesheetManager.styleMirror,
         );
         if ((id && id !== -1) || (styleId && styleId !== -1)) {
-          if (!tracked(thisArg.parentRule?.parentStyleSheet, { id, styleId })) {
+          if (tracked(thisArg.parentRule?.parentStyleSheet, { id, styleId })) {
+            tracker?.forgetRaw(thisArg.parentRule);
+          } else {
             styleDeclarationCb({
               id,
               styleId,

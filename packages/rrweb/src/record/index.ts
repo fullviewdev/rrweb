@@ -211,35 +211,41 @@ function record<T = eventWithTime>(
     const e = r as eventWithTime;
 
     // Before this event is stamped: the diffs it forces out go through here too and must carry
-    // an earlier timestamp. A held stylesheet diff must never follow an event that depends on the sheet as it stands:
-    // a style-declaration event addresses a rule by index, a mutation may remove the style
-    // element. Every other source flushes the trackers first.
+    // an earlier timestamp. A held stylesheet diff must never follow an event that depends on the
+    // sheet as it stands: a mutation may remove the style element, a mouse event may be what the
+    // player pauses on. Every other source flushes the trackers first.
     if (
       styleSheetDiffTrackers.length > 0 &&
       e.type === EventType.IncrementalSnapshot &&
       e.data.source !== IncrementalSource.StyleSheetRule
     ) {
-      styleSheetDiffTrackers.forEach((tracker) => tracker.flushAll());
-
-      // A text mutation on a <style> element replaces its whole sheet on both sides, so the
-      // sheet the player now holds is the live one, not the tracker's last emitted state.
-      if (e.data.source === IncrementalSource.Mutation && e.data.texts.length) {
+      // A mutation that rewrites a <style> element's text (its text node changed, added or
+      // removed) replaces the whole sheet on both sides: the player re-parses the text, so the
+      // sheet it will hold is the live one, and whatever the tracker still had pending for that
+      // sheet is superseded. Reseed before flushing, so no diff describes the rewrite twice.
+      if (e.data.source === IncrementalSource.Mutation) {
         const rewritten: CSSStyleSheet[] = [];
-        e.data.texts.forEach((text) => {
-          const parent = mirror.getNode(text.id)?.parentNode as
-            | HTMLStyleElement
-            | null
-            | undefined;
-          if (parent && parent.nodeName === 'STYLE' && parent.sheet) {
-            rewritten.push(parent.sheet);
+        const noteStyle = (node: Node | null | undefined) => {
+          const style = node as HTMLStyleElement | null | undefined;
+          if (style && style.nodeName === 'STYLE' && style.sheet) {
+            rewritten.push(style.sheet);
           }
-        });
+        };
+        e.data.texts.forEach((text) =>
+          noteStyle(mirror.getNode(text.id)?.parentNode),
+        );
+        e.data.adds.forEach((add) => noteStyle(mirror.getNode(add.parentId)));
+        e.data.removes.forEach((remove) =>
+          noteStyle(mirror.getNode(remove.parentId)),
+        );
         if (rewritten.length) {
           styleSheetDiffTrackers.forEach((tracker) =>
             tracker.reseed(rewritten),
           );
         }
       }
+
+      styleSheetDiffTrackers.forEach((tracker) => tracker.flushAll());
     }
 
     e.timestamp = nowTimestamp();

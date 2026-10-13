@@ -35,22 +35,22 @@ describe('diffRules', () => {
     const reset = Array.from({ length: 106 }, (_, i) => `.r${i}{}`);
     const extra = Array.from({ length: 7 }, (_, i) => `.dup${i}{}`);
     expect(diffRules([...reset, 'x{}'], [...reset, ...extra, 'x{}'])).toEqual([
-      { at: 106, removes: 0, adds: extra },
+      { at: 106, nowAt: 106, removes: 0, adds: extra },
     ]);
   });
 
   it('describes an append, a prepend, a delete and a replacement', () => {
     expect(diffRules(['a{}'], ['a{}', 'b{}'])).toEqual([
-      { at: 1, removes: 0, adds: ['b{}'] },
+      { at: 1, nowAt: 1, removes: 0, adds: ['b{}'] },
     ]);
     expect(diffRules(['a{}'], ['z{}', 'a{}'])).toEqual([
-      { at: 0, removes: 0, adds: ['z{}'] },
+      { at: 0, nowAt: 0, removes: 0, adds: ['z{}'] },
     ]);
     expect(diffRules(['a{}', 'b{}', 'c{}'], ['a{}', 'c{}'])).toEqual([
-      { at: 1, removes: 1, adds: [] },
+      { at: 1, nowAt: 1, removes: 1, adds: [] },
     ]);
     expect(diffRules(['a{}', 'b{}', 'c{}'], ['a{}', 'B{}', 'c{}'])).toEqual([
-      { at: 1, removes: 1, adds: ['B{}'] },
+      { at: 1, nowAt: 1, removes: 1, adds: ['B{}'] },
     ]);
   });
 
@@ -62,17 +62,17 @@ describe('diffRules', () => {
     edited[10] = '.r10{padding:1px}';
     const hunks = diffRules(reset, [...edited, '.new{}']);
     expect(hunks).toEqual([
-      { at: 10, removes: 1, adds: ['.r10{padding:1px}'] },
-      { at: 100, removes: 0, adds: ['.new{}'] },
+      { at: 10, nowAt: 10, removes: 1, adds: ['.r10{padding:1px}'] },
+      { at: 100, nowAt: 100, removes: 0, adds: ['.new{}'] },
     ]);
   });
 
   it('does not let the suffix overlap the prefix on repeated rules', () => {
     expect(diffRules(['a{}'], ['a{}', 'a{}'])).toEqual([
-      { at: 1, removes: 0, adds: ['a{}'] },
+      { at: 1, nowAt: 1, removes: 0, adds: ['a{}'] },
     ]);
     expect(diffRules(['a{}', 'a{}'], ['a{}'])).toEqual([
-      { at: 1, removes: 1, adds: [] },
+      { at: 1, nowAt: 1, removes: 1, adds: [] },
     ]);
   });
 
@@ -273,6 +273,80 @@ describe('StyleSheetDiffTracker', () => {
       },
     ]);
     hidden.dispose();
+  });
+
+  it('emits the raw inserted text until the rule is edited in place', () => {
+    const sheet = fakeSheet(['a{}']);
+    tracker.touch(sheet, { id: 1 });
+    // The browser serialises what was inserted; the player must get the author's text.
+    const inserted = {
+      cssText: '.x { border-top-color: ; border: var(--w) solid; }',
+    };
+    sheet.list.push(inserted);
+    tracker.rememberRaw(
+      inserted as unknown as CSSRule,
+      '.x{border:var(--w) solid}',
+    );
+    frame();
+    expect(emitted).toEqual([
+      {
+        id: 1,
+        adds: [{ rule: '.x{border:var(--w) solid}', index: 1 }],
+        removes: [],
+      },
+    ]);
+
+    // A declaration edit makes the raw text stale: the serialisation is the truth from here on.
+    emitted = [];
+    tracker.forgetRaw(inserted as unknown as CSSRule);
+    inserted.cssText = '.x { border-top-color: ; border: var(--w) dashed; }';
+    tracker.touch(sheet, { id: 1 });
+    frame();
+    expect(emitted).toEqual([
+      {
+        id: 1,
+        adds: [
+          {
+            rule: '.x { border-top-color: ; border: var(--w) dashed; }',
+            index: 2,
+          },
+        ],
+        removes: [{ index: 1 }],
+      },
+    ]);
+  });
+
+  it('treats a rule re-inserted with the same serialisation as unchanged, whatever text it had', () => {
+    // A sheet parsed from text holds `a { }`; the page deletes it and inserts `a{}` by hand: same
+    // serialisation, so nothing to send, even though the new rule has raw text and the old had none.
+    const sheet = fakeSheet(['a { }', 'b { }']);
+    tracker.touch(sheet, { id: 1 });
+    sheet.list.splice(0, 1);
+    tracker.touch(sheet, { id: 1 });
+    const again = { cssText: 'a { }' };
+    sheet.list.unshift(again);
+    tracker.rememberRaw(again as unknown as CSSRule, 'a{}');
+    tracker.touch(sheet, { id: 1 });
+    frame();
+    expect(emitted).toEqual([]);
+  });
+
+  it('lets only the first tracker that saw a sheet describe it', () => {
+    const second = new StyleSheetDiffTracker((p) => emitted.push(p), doc, {
+      mode: 'frame',
+    });
+    const sheet = fakeSheet(['a{}']);
+    expect(tracker.touch(sheet, { id: 1 })).toBe(true);
+    sheet.list.push({ cssText: 'b{}' });
+    // Stacked observers: the same call reaches both trackers. The second must neither emit nor
+    // fall through to a per-call event.
+    expect(tracker.touch(sheet, { id: 1 })).toBe(true);
+    expect(second.touch(sheet, { id: 1 })).toBe(true);
+    frame();
+    expect(emitted).toEqual([
+      { id: 1, adds: [{ rule: 'b{}', index: 1 }], removes: [] },
+    ]);
+    second.dispose();
   });
 
   it('flushAll emits what is pending before the frame, and reseed makes the live state the baseline', () => {
