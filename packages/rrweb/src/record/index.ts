@@ -4,7 +4,11 @@ import {
   type SlimDOMOptions,
   createMirror,
 } from 'rrweb-snapshot';
-import { initObservers, mutationBuffers } from './observer';
+import {
+  initObservers,
+  mutationBuffers,
+  styleSheetDiffTrackers,
+} from './observer';
 import {
   on,
   getWindowWidth,
@@ -224,6 +228,37 @@ function record<T = eventWithTime>(
       mutationBuffers.forEach((buf) => buf.unfreeze());
     }
 
+    // A held stylesheet diff must never follow an event that depends on the sheet as it stands:
+    // a style-declaration event addresses a rule by index, a mutation may remove the style
+    // element. Every other source flushes the trackers first.
+    if (
+      styleSheetDiffTrackers.length > 0 &&
+      e.type === EventType.IncrementalSnapshot &&
+      e.data.source !== IncrementalSource.StyleSheetRule
+    ) {
+      styleSheetDiffTrackers.forEach((tracker) => tracker.flushAll());
+
+      // A text mutation on a <style> element replaces its whole sheet on both sides, so the
+      // sheet the player now holds is the live one, not the tracker's last emitted state.
+      if (e.data.source === IncrementalSource.Mutation && e.data.texts.length) {
+        const rewritten: CSSStyleSheet[] = [];
+        e.data.texts.forEach((text) => {
+          const parent = mirror.getNode(text.id)?.parentNode as
+            | HTMLStyleElement
+            | null
+            | undefined;
+          if (parent && parent.nodeName === 'STYLE' && parent.sheet) {
+            rewritten.push(parent.sheet);
+          }
+        });
+        if (rewritten.length) {
+          styleSheetDiffTrackers.forEach((tracker) =>
+            tracker.reseed(rewritten),
+          );
+        }
+      }
+    }
+
     if (inEmittingFrame) {
       emit?.(eventProcessor(e), isCheckout);
     } else if (passEmitsToParent) {
@@ -377,6 +412,10 @@ function record<T = eventWithTime>(
       isCheckout,
     );
 
+    // Pending stylesheet diffs describe the sheets before this snapshot; emitted after it they
+    // would re-apply what the snapshot already carries.
+    styleSheetDiffTrackers.forEach((tracker) => tracker.flushAll());
+
     // When we take a full snapshot, old tracked StyleSheets need to be removed.
     stylesheetManager.reset();
 
@@ -435,6 +474,14 @@ function record<T = eventWithTime>(
       isCheckout,
     );
     mutationBuffers.forEach((buf) => buf.unlock()); // generate & emit any mutations that happened during snapshotting, as can now apply against the newly built mirror
+
+    // The snapshot serialised every sheet as it is now, so that is the state the player holds.
+    if (styleSheetDiffTrackers.length > 0) {
+      const sheets = Array.from(document.styleSheets).concat(
+        Array.from(document.adoptedStyleSheets || []),
+      );
+      styleSheetDiffTrackers.forEach((tracker) => tracker.reseed(sheets));
+    }
 
     // Some old browsers don't support adoptedStyleSheets.
     if (document.adoptedStyleSheets && document.adoptedStyleSheets.length > 0)
@@ -549,6 +596,7 @@ function record<T = eventWithTime>(
                 },
               });
             },
+            styleSheetRuleEmit: options.styleSheetRuleEmit,
             largeMutationsConfig: options.largeMutationsConfig && {
               limit: options.largeMutationsConfig.limit,
               fullSnapshotCb: debounceFullSnapshot,
@@ -620,6 +668,17 @@ function record<T = eventWithTime>(
       handlers.push(observe(document));
       recording = true;
     };
+
+    if (options.styleSheetRuleEmit?.mode === 'frame') {
+      // A closing tab must not take its last frame of stylesheet changes with it.
+      handlers.push(
+        on(
+          'pagehide',
+          () => styleSheetDiffTrackers.forEach((tracker) => tracker.flushAll()),
+          window,
+        ),
+      );
+    }
     if (
       document.readyState === 'interactive' ||
       document.readyState === 'complete'
