@@ -102,6 +102,23 @@ describe('diffRules', () => {
   });
 });
 
+/** What the replayer does with an event: every add in order, then every remove in order. */
+function applyEvents(
+  before: string[],
+  events: styleSheetRuleParam[],
+): string[] {
+  const sheet = before.slice();
+  for (const event of events) {
+    (event.adds || []).forEach((add) =>
+      sheet.splice(add.index as number, 0, add.rule),
+    );
+    (event.removes || []).forEach((remove) =>
+      sheet.splice(remove.index as number, 1),
+    );
+  }
+  return sheet;
+}
+
 /** A stand-in CSSStyleSheet: a mutable rule list the tracker reads through `cssRules`. */
 function fakeSheet(rules: string[]) {
   const list = rules.map((cssText) => ({ cssText }));
@@ -148,15 +165,23 @@ describe('StyleSheetDiffTracker', () => {
     expect(emitted).toEqual([]);
 
     frame();
+    // Adds land right after the block they replace, and the block is deleted after them, because
+    // the replayer applies an event's adds before its removes.
     expect(emitted).toEqual([
-      { id: 7, removes: [{ index: 1 }] },
       {
         id: 7,
         adds: [
-          { rule: 'B{}', index: 1 },
-          { rule: 'B2{}', index: 2 },
+          { rule: 'B{}', index: 2 },
+          { rule: 'B2{}', index: 3 },
         ],
+        removes: [{ index: 1 }],
       },
+    ]);
+    expect(applyEvents(['a{}', 'b{}', 'c{}'], emitted)).toEqual([
+      'a{}',
+      'B{}',
+      'B2{}',
+      'c{}',
     ]);
   });
 
@@ -171,26 +196,33 @@ describe('StyleSheetDiffTracker', () => {
     expect(emitted).toEqual([]);
   });
 
-  it('chunks a large insert into several events', () => {
+  it('chunks a large insert into several events, removes riding the last one', () => {
     const small = new StyleSheetDiffTracker((p) => emitted.push(p), doc, {
       mode: 'frame',
       maxRulesPerEvent: 2,
     });
-    const sheet = fakeSheet([]);
+    const sheet = fakeSheet(['old{}']);
     small.touch(sheet, { id: 1 });
-    sheet.list.push({ cssText: 'a{}' }, { cssText: 'b{}' }, { cssText: 'c{}' });
+    sheet.list.splice(
+      0,
+      1,
+      { cssText: 'a{}' },
+      { cssText: 'b{}' },
+      { cssText: 'c{}' },
+    );
     small.touch(sheet, { id: 1 });
     frame();
     expect(emitted).toEqual([
       {
         id: 1,
         adds: [
-          { rule: 'a{}', index: 0 },
-          { rule: 'b{}', index: 1 },
+          { rule: 'a{}', index: 1 },
+          { rule: 'b{}', index: 2 },
         ],
       },
-      { id: 1, adds: [{ rule: 'c{}', index: 2 }] },
+      { id: 1, adds: [{ rule: 'c{}', index: 3 }], removes: [{ index: 0 }] },
     ]);
+    expect(applyEvents(['old{}'], emitted)).toEqual(['a{}', 'b{}', 'c{}']);
     small.dispose();
   });
 
@@ -237,6 +269,7 @@ describe('StyleSheetDiffTracker', () => {
           { rule: 'h2{}', index: 0 },
           { rule: 'h1{}', index: 1 },
         ],
+        removes: [],
       },
     ]);
     hidden.dispose();
@@ -248,7 +281,9 @@ describe('StyleSheetDiffTracker', () => {
     sheet.list.push({ cssText: 'b{}' });
     tracker.touch(sheet, { id: 1 });
     tracker.flushAll();
-    expect(emitted).toEqual([{ id: 1, adds: [{ rule: 'b{}', index: 1 }] }]);
+    expect(emitted).toEqual([
+      { id: 1, adds: [{ rule: 'b{}', index: 1 }], removes: [] },
+    ]);
 
     // A snapshot carried the sheet with a third rule the tracker never saw inserted.
     emitted = [];
@@ -257,6 +292,40 @@ describe('StyleSheetDiffTracker', () => {
     sheet.list.push({ cssText: 'd{}' });
     tracker.touch(sheet, { id: 1 });
     frame();
-    expect(emitted).toEqual([{ id: 1, adds: [{ rule: 'd{}', index: 3 }] }]);
+    expect(emitted).toEqual([
+      { id: 1, adds: [{ rule: 'd{}', index: 3 }], removes: [] },
+    ]);
+  });
+
+  it('emits one event per sheet per frame that the replayer applies back exactly, for random edits', () => {
+    let seed = 777;
+    const rand = (n: number) => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return seed % n;
+    };
+    for (let round = 0; round < 300; round++) {
+      const before = Array.from({ length: rand(80) }, () => `.r${rand(10)}{}`);
+      const sheet = fakeSheet(before);
+      emitted = [];
+      tracker.touch(sheet, { id: 5 });
+      for (let e = 0; e < 1 + rand(8); e++) {
+        const kind = rand(3);
+        if (kind === 0 && sheet.list.length)
+          sheet.list.splice(rand(sheet.list.length), 1);
+        else if (kind === 1)
+          sheet.list.splice(rand(sheet.list.length + 1), 0, {
+            cssText: `.r${rand(10)}{}`,
+          });
+        else if (sheet.list.length) {
+          const [item] = sheet.list.splice(rand(sheet.list.length), 1);
+          sheet.list.splice(rand(sheet.list.length + 1), 0, item);
+        }
+        tracker.touch(sheet, { id: 5 });
+      }
+      frame();
+      const now = sheet.list.map((r) => r.cssText);
+      expect(emitted.length).toBeLessThanOrEqual(1);
+      expect(applyEvents(before, emitted)).toEqual(now);
+    }
   });
 });

@@ -145,30 +145,52 @@ export class StyleSheetDiffTracker {
     }
     this.lastEmitted.set(sheet, now);
 
-    // Hunks are applied from the end of the sheet backwards, so every hunk's index, which is in
-    // `before` coordinates, is still right when the player reaches it.
+    // One event per sheet per frame, shaped for how the replayer applies an event: every add
+    // first, in array order, then every remove. Each hunk's new rules go in right after the old
+    // block they replace, and the old block is then deleted at the hunk's start. Hunks are listed
+    // from the end of the sheet backwards, so every index is still right when the player reaches
+    // it, whatever happened to later hunks. Nothing about this depends on any other event, so two
+    // events with the same timestamp can be reordered downstream without harm.
     const hunks = diffRules(before, now);
+    if (hunks.length === 0) return;
+
+    const adds: { rule: string; index: number }[] = [];
+    const removes: { index: number }[] = [];
+    // Adds, later hunks first, in the sheet's original coordinates: a later hunk's inserts sit
+    // after everything an earlier hunk touches, so they never move an earlier hunk's indices.
     for (let h = hunks.length - 1; h >= 0; h--) {
       const hunk = hunks[h];
-      if (hunk.removes > 0) {
-        this.cb({
-          ...ids,
-          removes: Array.from({ length: hunk.removes }, () => ({
-            index: hunk.at,
-          })),
-        });
-      }
-      for (
-        let from = 0;
-        from < hunk.adds.length;
-        from += this.maxRulesPerEvent
-      ) {
-        const chunk = hunk.adds.slice(from, from + this.maxRulesPerEvent);
-        this.cb({
-          ...ids,
-          adds: chunk.map((rule, k) => ({ rule, index: hunk.at + from + k })),
-        });
-      }
+      hunk.adds.forEach((rule, k) =>
+        adds.push({ rule, index: hunk.at + hunk.removes + k }),
+      );
+    }
+    // Removes, later hunks first too, but by then every hunk's adds are in, and the adds of the
+    // hunks before this one have pushed its old block to the right by their count.
+    let addedBefore = 0;
+    const shifted = hunks.map((hunk) => {
+      const at = hunk.at + addedBefore;
+      addedBefore += hunk.adds.length;
+      return at;
+    });
+    for (let h = hunks.length - 1; h >= 0; h--) {
+      for (let r = 0; r < hunks[h].removes; r++)
+        removes.push({ index: shifted[h] });
+    }
+
+    if (adds.length <= this.maxRulesPerEvent) {
+      this.cb({ ...ids, adds, removes });
+      return;
+    }
+
+    // A frame that inserts more rules than fit one event (a page load's worth) is the one case
+    // that takes several events, and they must be applied in order: each later chunk's indices
+    // assume the earlier ones are in. They are emitted back to back with the same timestamp.
+    for (let from = 0; from < adds.length; from += this.maxRulesPerEvent) {
+      const chunk = adds.slice(from, from + this.maxRulesPerEvent);
+      const last = from + this.maxRulesPerEvent >= adds.length;
+      this.cb(
+        last ? { ...ids, adds: chunk, removes } : { ...ids, adds: chunk },
+      );
     }
   }
 
