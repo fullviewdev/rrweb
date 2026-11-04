@@ -1,0 +1,17 @@
+version: 2
+updates:
+  # Security updates only, grouped into one PR per directory instead of one PR per package.
+  # open-pull-requests-limit: 0 turns off scheduled version updates for npm; it does not
+  # affect security updates.
+  - package-ecosystem: npm
+    directories:
+      - "/"
+      - "/packages/*"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
